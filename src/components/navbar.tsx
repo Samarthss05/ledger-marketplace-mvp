@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
+import logo from "../../public/logo.png";
 
 const navLinks = [
     { label: "Platform", href: "#platform" },
@@ -38,7 +39,7 @@ export default function Navbar() {
                     {/* Logo */}
                     <a href="#" className="flex items-center gap-2.5 group">
                         <Image
-                            src="/logo.png"
+                            src={logo}
                             alt="Ledger"
                             width={36}
                             height={36}

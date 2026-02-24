@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Store, Truck, ArrowRight, Zap, TrendingDown, Shield, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import logo from "../../../public/logo.png";
 
 export default function AuctionLanding() {
     return (
@@ -11,7 +12,7 @@ export default function AuctionLanding() {
             {/* Header */}
             <header className="flex items-center justify-between px-6 lg:px-12 py-5">
                 <Link href="/" className="flex items-center gap-2.5">
-                    <Image src="/logo.png" alt="Ledger" width={32} height={32} className="rounded-lg" />
+                    <Image src={logo} alt="Ledger" width={32} height={32} className="rounded-lg" />
                     <span className="text-lg font-bold tracking-tight text-[#2C432D]">Ledger</span>
                 </Link>
                 <Link

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import logo from "../../../../public/logo.png";
 import { usePathname } from "next/navigation";
 import {
     Truck, LayoutDashboard, Gavel, ClipboardList, BarChart3, Bell, LogOut,
@@ -42,7 +43,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                     <div className="flex items-center justify-between h-14">
                         <div className="flex items-center gap-4">
                             <Link href="/auction" className="flex items-center gap-2">
-                                <Image src="/logo.png" alt="Ledger" width={28} height={28} className="rounded-lg" />
+                                <Image src={logo} alt="Ledger" width={28} height={28} className="rounded-lg" />
                                 <span className="text-base font-bold tracking-tight text-[#2C432D] hidden sm:block">Ledger</span>
                             </Link>
                             <div className="h-5 w-px bg-[#E5E5E0]" />

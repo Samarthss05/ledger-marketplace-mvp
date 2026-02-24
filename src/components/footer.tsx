@@ -1,5 +1,6 @@
 import { Github, Linkedin, Twitter } from "lucide-react";
 import Image from "next/image";
+import logo from "../../public/logo.png";
 
 const footerLinks = {
     Platform: [
@@ -30,7 +31,7 @@ export default function Footer() {
                     {/* Brand */}
                     <div className="col-span-2 md:col-span-1">
                         <div className="flex items-center gap-2 mb-4">
-                            <Image src="/logo.png" alt="Ledger" width={28} height={28} className="rounded-md" />
+                            <Image src={logo} alt="Ledger" width={28} height={28} className="rounded-md" />
                             <span className="text-lg font-bold tracking-tight text-foreground">
                                 LEDGER
                             </span>
