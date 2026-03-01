@@ -52,37 +52,52 @@ export default function ShopDashboard() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-            {/* Welcome */}
+            {/* Welcome Banner */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-xl font-bold text-[#1A1A1A]">Welcome back, RK Minimart</h1>
-                    <p className="text-sm text-[#6B7265] mt-0.5">Here&apos;s your auction activity at a glance</p>
-                </div>
-                <div className="flex gap-2">
-                    <Link href="/auction/shop/marketplace"
-                        className="flex items-center gap-2 px-4 py-2.5 bg-[#4A6741] text-white text-sm font-medium rounded-xl hover:bg-[#3D5A35] transition-colors shadow-sm">
-                        <ShoppingBag size={14} /> Browse Auctions
-                    </Link>
-                    <Link href="/auction/shop/demand"
-                        className="flex items-center gap-2 px-4 py-2.5 bg-white text-[#1A1A1A] text-sm font-medium rounded-xl border border-[#E5E5E0] hover:bg-[#F7F7F5] transition-colors">
-                        <Layers size={14} /> Submit Demand
-                    </Link>
+                className="relative overflow-hidden rounded-2xl border border-[#E5E5E0] bg-gradient-to-r from-[#1A2E1B] via-[#2C432D] to-[#3D5A35] p-6">
+                {/* Mesh gradient overlay */}
+                <div className="absolute inset-0 opacity-20"
+                    style={{ background: "radial-gradient(ellipse at 20% 50%, rgba(107,143,97,0.4) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(74,103,65,0.3) 0%, transparent 50%), radial-gradient(ellipse at 60% 80%, rgba(61,90,53,0.3) 0%, transparent 50%)" }} />
+                <div className="absolute top-0 right-0 w-64 h-64 opacity-[0.04]"
+                    style={{ background: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "16px 16px" }} />
+                <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/10">
+                                <Sparkles size={10} className="text-[#A8C89A]" />
+                                <span className="text-[9px] font-medium text-[#A8C89A] uppercase tracking-wider">Smart Procurement</span>
+                            </div>
+                        </div>
+                        <h1 className="text-xl font-bold text-white">Welcome back, RK Minimart</h1>
+                        <p className="text-sm text-white/50 mt-0.5">Here&apos;s your auction activity at a glance</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Link href="/auction/shop/marketplace"
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white text-[#2C432D] text-sm font-medium rounded-xl hover:bg-white/90 transition-colors shadow-sm">
+                            <ShoppingBag size={14} /> Browse Auctions
+                        </Link>
+                        <Link href="/auction/shop/demand"
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm text-white text-sm font-medium rounded-xl border border-white/15 hover:bg-white/20 transition-colors">
+                            <Layers size={14} /> Submit Demand
+                        </Link>
+                    </div>
                 </div>
             </motion.div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { icon: TrendingDown, label: "Total Savings", value: "$24,800", sub: "vs retail prices", iconBg: "bg-[#4A6741]" },
-                    { icon: ShoppingBag, label: "Active Auctions", value: activeAuctions.length.toString(), sub: "you can join now", iconBg: "bg-[#3B6B9B]" },
-                    { icon: Layers, label: "Demand Requests", value: myDemand.length.toString(), sub: "being aggregated", iconBg: "bg-[#B8860B]" },
-                    { icon: Package, label: "Orders This Month", value: myOrders.length.toString(), sub: `${myOrders.filter(o => o.status === "delivered").length} delivered`, iconBg: "bg-[#7B1FA2]" },
+                    { icon: TrendingDown, label: "Total Savings", value: "$24,800", sub: "vs retail prices", accent: "from-[#2C432D] to-[#4A6741]" },
+                    { icon: ShoppingBag, label: "Active Auctions", value: activeAuctions.length.toString(), sub: "you can join now", accent: "from-[#3B6B9B] to-[#5A8DB8]" },
+                    { icon: Layers, label: "Demand Requests", value: myDemand.length.toString(), sub: "being aggregated", accent: "from-[#B8860B] to-[#D4A017]" },
+                    { icon: Package, label: "Orders This Month", value: myOrders.length.toString(), sub: `${myOrders.filter(o => o.status === "delivered").length} delivered`, accent: "from-[#7B1FA2] to-[#9C27B0]" },
                 ].map((stat, i) => (
                     <motion.div key={stat.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: 0.1 + i * 0.05 }}
-                        className="bg-white rounded-2xl border border-[#E5E5E0] p-4 hover:shadow-lg hover:shadow-[#4A6741]/5 transition-all duration-300">
-                        <div className={`w - 9 h - 9 rounded - xl ${stat.iconBg} flex items - center justify - center text - white mb - 3 shadow - sm`}>
+                        className="relative overflow-hidden bg-white rounded-2xl border border-[#E5E5E0] p-4 hover:shadow-lg hover:shadow-[#4A6741]/8 transition-all duration-300 group">
+                        <div className="absolute top-0 right-0 w-20 h-20 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity"
+                            style={{ background: "radial-gradient(circle at top right, #4A6741, transparent 70%)" }} />
+                        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${stat.accent} flex items-center justify-center text-white mb-3 shadow-sm`}>
                             <stat.icon size={16} />
                         </div>
                         <p className="text-xl font-bold text-[#1A1A1A]">{stat.value}</p>

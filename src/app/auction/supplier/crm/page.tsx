@@ -3,80 +3,121 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    Users, Search, Star, ArrowRight, MessageCircle, Package, Clock,
+    FileText, Search, Star, ArrowRight, MessageCircle, Package, Clock, Shield,
     DollarSign, Send, TrendingUp, RefreshCcw, ChevronRight, Eye, Sparkles, CheckCircle2,
+    AlertTriangle, Timer, ShoppingBag, Zap, Lock, X,
 } from "lucide-react";
 import { formatCurrency } from "../../lib/mock-data";
 import { products } from "../../lib/products-db";
 
-interface Shop {
+// Anonymized RFQ data — shops are identified by region code only
+interface RFQ {
     id: string;
-    name: string;
-    location: string;
-    totalOrders: number;
-    totalSpent: number;
-    lastOrder: string;
-    reorderFreq: string;
-    rating: number;
-    preferredCategories: string[];
-    trend: "up" | "down" | "stable";
+    regionCode: string;
+    product: string;
+    category: string;
+    quantity: number;
+    unit: string;
+    targetPrice: number;
+    marketPrice: number;
+    urgency: "standard" | "urgent" | "critical";
+    receivedAt: string;
+    expiresIn: string;
+    status: "open" | "quoted" | "won" | "lost" | "expired";
+    yourQuote?: number;
+    competingQuotes: number;
 }
 
-const shops: Shop[] = [
-    { id: "sh1", name: "RK Minimart", location: "Makati", totalOrders: 12, totalSpent: 185000, lastOrder: "Feb 18", reorderFreq: "Weekly", rating: 5, preferredCategories: ["Beverages", "Rice"], trend: "up" },
-    { id: "sh2", name: "Kedai Muthu", location: "Makati", totalOrders: 8, totalSpent: 120000, lastOrder: "Feb 12", reorderFreq: "Bi-weekly", rating: 4, preferredCategories: ["Beverages", "Snacks"], trend: "stable" },
-    { id: "sh3", name: "Lucky Express Mart", location: "BGC", totalOrders: 15, totalSpent: 280000, lastOrder: "Feb 15", reorderFreq: "Weekly", rating: 5, preferredCategories: ["Beverages", "Cooking Oil", "Rice"], trend: "up" },
-    { id: "sh4", name: "Ah Kow Store Sari-Sari", location: "Makati", totalOrders: 6, totalSpent: 85000, lastOrder: "Jan 28", reorderFreq: "Monthly", rating: 4, preferredCategories: ["Rice", "Snacks"], trend: "down" },
-    { id: "sh5", name: "Golden Mini Mart", location: "BGC", totalOrders: 3, totalSpent: 42000, lastOrder: "Feb 5", reorderFreq: "New customer", rating: 0, preferredCategories: ["Beverages"], trend: "up" },
-];
+const p_sprite = products.find(p => p.name.includes("Sprite") && p.name.includes("1.5L")) || products[0];
+const p_milo = products.find(p => p.name.includes("Milo") && p.name.includes("2KG")) || products[1];
+const p_indomie = products.find(p => p.name.includes("Mi Goreng") && p.name.includes("Carton")) || products[2];
+const p_rice = products.find(p => p.name.includes("Basmati Rice 1KG")) || products[3];
+const p_maggi = products.find(p => p.name.includes("Maggi")) || products[4];
+const p_coke = products.find(p => p.name.includes("Coca-Cola")) || products[5];
 
-const p_milo = products.find(p => p.name.includes("Milo") && p.name.includes("400G")) || products[0];
-const p_rice = products.find(p => p.name.includes("Basmati Rice 1KG")) || products[1];
-
-const directOffers = [
-    { id: "do1", type: "outbound_offer", shop: "RK Minimart", product: p_milo.name, regularPrice: p_milo.price, offerPrice: p_milo.cost + 0.15, qty: 200, status: "sent", response: "pending", date: "Feb 20" },
-    { id: "do2", type: "outbound_offer", shop: "Lucky Express Mart", product: p_rice.name, regularPrice: p_rice.price, offerPrice: p_rice.cost + 0.10, qty: 100, status: "accepted", response: "accepted", date: "Feb 15" },
-    { id: "req1", type: "inbound_restock", shop: "RK Minimart", product: p_milo.name, targetPrice: p_milo.price - 0.05, qty: 50, status: "pending", response: "pending", date: "Today" },
+const rfqs: RFQ[] = [
+    { id: "RFQ-4821", regionCode: "Central", product: p_sprite.name, category: "Beverages", quantity: 50, unit: "Cartons", targetPrice: p_sprite.price * 0.9, marketPrice: p_sprite.price, urgency: "urgent", receivedAt: "2h ago", expiresIn: "4h left", status: "open", competingQuotes: 2 },
+    { id: "RFQ-4819", regionCode: "East", product: p_milo.name, category: "Beverages", quantity: 100, unit: "Packs", targetPrice: p_milo.price * 0.88, marketPrice: p_milo.price, urgency: "standard", receivedAt: "5h ago", expiresIn: "19h left", status: "open", competingQuotes: 1 },
+    { id: "RFQ-4815", regionCode: "Central", product: p_indomie.name, category: "Instant Noodles", quantity: 200, unit: "Cartons", targetPrice: p_indomie.price * 0.92, marketPrice: p_indomie.price, urgency: "critical", receivedAt: "30m ago", expiresIn: "1h left", status: "open", competingQuotes: 0 },
+    { id: "RFQ-4810", regionCode: "West", product: p_rice.name, category: "Rice & Grains", quantity: 300, unit: "Bags", targetPrice: p_rice.price * 0.95, marketPrice: p_rice.price, urgency: "standard", receivedAt: "1d ago", expiresIn: "23h left", status: "quoted", yourQuote: p_rice.price * 0.93, competingQuotes: 3 },
+    { id: "RFQ-4802", regionCode: "North", product: p_maggi.name, category: "Sauces & Condiments", quantity: 150, unit: "Units", targetPrice: p_maggi.price * 0.9, marketPrice: p_maggi.price, urgency: "standard", receivedAt: "2d ago", expiresIn: "Closed", status: "won", yourQuote: p_maggi.price * 0.91, competingQuotes: 4 },
+    { id: "RFQ-4798", regionCode: "East", product: p_coke.name, category: "Beverages", quantity: 80, unit: "Cartons", targetPrice: p_coke.price * 0.88, marketPrice: p_coke.price, urgency: "urgent", receivedAt: "3d ago", expiresIn: "Closed", status: "lost", yourQuote: p_coke.price * 0.92, competingQuotes: 5 },
 ];
 
 const feedbackItems = [
-    { shop: "RK Minimart", rating: 5, feedback: "Perfect delivery, on time and great quality. Will order again!", date: "Feb 18", responded: true },
-    { shop: "Kedai Muthu", rating: 4, feedback: "Good products but delivery was delayed by half a day.", date: "Feb 12", responded: false },
-    { shop: "Lucky Express Mart", rating: 5, feedback: "Best pricing we've seen! Highly recommended supplier.", date: "Feb 10", responded: true },
+    { rfqId: "RFQ-4790", rating: 5, feedback: "Fast delivery and fair pricing. Order fulfilled perfectly.", date: "Feb 18", responded: true },
+    { rfqId: "RFQ-4775", rating: 4, feedback: "Good quality products. Delivery was half a day late.", date: "Feb 12", responded: false },
+    { rfqId: "RFQ-4760", rating: 5, feedback: "Excellent supplier — competitive pricing and reliable.", date: "Feb 10", responded: true },
 ];
 
-export default function ShopCRMPage() {
+export default function SupplierRFQCenter() {
     const [search, setSearch] = useState("");
-    const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
-    const [tab, setTab] = useState<"customers" | "contracts" | "feedback">("customers");
-    const [showOffer, setShowOffer] = useState(false);
+    const [tab, setTab] = useState<"rfqs" | "history" | "feedback">("rfqs");
+    const [statusFilter, setStatusFilter] = useState<"all" | "open" | "quoted" | "won" | "lost">("all");
+    const [quoteModal, setQuoteModal] = useState<RFQ | null>(null);
 
-    const filtered = shops.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+    const filtered = rfqs.filter(r => {
+        const matchesSearch = r.product.toLowerCase().includes(search.toLowerCase()) || r.id.toLowerCase().includes(search.toLowerCase());
+        const matchesStatus = statusFilter === "all" || r.status === statusFilter;
+        const matchesTab = tab === "rfqs" ? (r.status === "open" || r.status === "quoted") : (r.status === "won" || r.status === "lost" || r.status === "expired");
+        return matchesSearch && (tab === "feedback" || matchesStatus === true) && (tab === "feedback" || matchesTab);
+    });
+
+    const openCount = rfqs.filter(r => r.status === "open").length;
+    const quotedCount = rfqs.filter(r => r.status === "quoted").length;
+    const wonCount = rfqs.filter(r => r.status === "won").length;
+    const avgWinRate = rfqs.filter(r => r.status === "won" || r.status === "lost").length > 0
+        ? Math.round(wonCount / rfqs.filter(r => r.status === "won" || r.status === "lost").length * 100) : 0;
+
+    const urgencyConfig = {
+        standard: { color: "text-[#6B7265]", bg: "bg-[#F7F7F5]", border: "border-[#E5E5E0]", label: "Standard", icon: Clock },
+        urgent: { color: "text-[#F57F17]", bg: "bg-[#FFF8E1]", border: "border-[#F57F17]/20", label: "Urgent", icon: Timer },
+        critical: { color: "text-[#C53030]", bg: "bg-[#FFF5F5]", border: "border-[#C53030]/20", label: "Critical", icon: AlertTriangle },
+    };
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            {/* Header */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-xl font-bold text-[#1A1A1A]">Shop CRM</h1>
-                    <p className="text-sm text-[#6B7265] mt-0.5">Manage customer relationships, send offers, and track feedback</p>
+                    <div className="flex items-center gap-2 mb-1">
+                        <h1 className="text-xl font-bold text-[#1A1A1A]">RFQ Response Center</h1>
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-[#F2F5F0] rounded-full border border-[#E5E5E0]">
+                            <Shield size={10} className="text-[#4A6741]" />
+                            <span className="text-[8px] font-bold text-[#4A6741] uppercase tracking-wider">Ledger Protected</span>
+                        </span>
+                    </div>
+                    <p className="text-sm text-[#6B7265] mt-0.5">Respond to purchase requests from verified shops. All transactions are routed through Ledger.</p>
                 </div>
                 <div className="flex bg-white border border-[#E5E5E0] rounded-xl overflow-hidden shadow-sm">
-                    {(["customers", "contracts", "feedback"] as const).map(t => (
+                    {(["rfqs", "history", "feedback"] as const).map(t => (
                         <button key={t} onClick={() => setTab(t)} className={`px-5 py-2.5 text-xs font-bold transition-colors ${tab === t ? "bg-[#2C432D] text-white" : "text-[#6B7265] hover:bg-[#F7F7F5] hover:text-[#1A1A1A]"}`}>
-                            {t === "contracts" ? "Contracts & Restocks" : t.charAt(0).toUpperCase() + t.slice(1)}
+                            {t === "rfqs" ? "Active RFQs" : t === "history" ? "Past Quotes" : "Feedback"}
                         </button>
                     ))}
+                </div>
+            </motion.div>
+
+            {/* Platform Trust Banner */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+                className="bg-gradient-to-r from-[#F2F5F0] to-[#F7F7F5] rounded-xl border border-[#E5E5E0] p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-[#4A6741] flex items-center justify-center flex-shrink-0">
+                    <Lock size={16} className="text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-[#1A1A1A]">All shop identities are protected</p>
+                    <p className="text-[10px] text-[#9CA38C] mt-0.5">Shop details are anonymized until an order is confirmed. All payments, deliveries, and communications are managed through Ledger to ensure trust and security for both parties.</p>
                 </div>
             </motion.div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { icon: Users, label: "Total Customers", value: shops.length.toString(), sub: "shop accounts", color: "bg-[#4A6741]" },
-                    { icon: DollarSign, label: "Lifetime Revenue", value: formatCurrency(shops.reduce((s, sh) => s + sh.totalSpent, 0)), sub: "from all shops", color: "bg-[#2C432D]" },
-                    { icon: RefreshCcw, label: "Repeat Rate", value: "76%", sub: "returning customers", color: "bg-[#3B6B9B]" },
-                    { icon: Star, label: "Avg Rating", value: "4.6", sub: "from shop reviews", color: "bg-[#B8860B]" },
+                    { icon: FileText, label: "Open RFQs", value: openCount.toString(), sub: "awaiting your quote", color: "bg-[#F57F17]" },
+                    { icon: Send, label: "Quotes Sent", value: quotedCount.toString(), sub: "pending decision", color: "bg-[#4A6741]" },
+                    { icon: CheckCircle2, label: "RFQs Won", value: wonCount.toString(), sub: "orders confirmed", color: "bg-[#2C432D]" },
+                    { icon: TrendingUp, label: "Win Rate", value: `${avgWinRate}%`, sub: "vs all submitted", color: "bg-[#3B6B9B]" },
                 ].map((s, i) => (
                     <motion.div key={s.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                         className="bg-white rounded-2xl border border-[#E5E5E0] p-4">
@@ -87,160 +128,132 @@ export default function ShopCRMPage() {
                 ))}
             </div>
 
-            {tab === "customers" && (
+            {/* RFQs Tab */}
+            {(tab === "rfqs" || tab === "history") && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                    <div className="relative"><Search size={14} className="absolute left-3.5 top-2.5 text-[#9CA38C]" />
-                        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search shops..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E5E5E0] rounded-xl text-sm outline-none focus:border-[#2C432D]" />
+                    {/* Filters */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex-1 relative">
+                            <Search size={14} className="absolute left-3.5 top-2.5 text-[#9CA38C]" />
+                            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by product or RFQ ID..."
+                                className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E5E5E0] rounded-xl text-sm outline-none focus:border-[#2C432D]" />
+                        </div>
+                        <div className="flex bg-white border border-[#E5E5E0] rounded-xl overflow-hidden">
+                            {(["all", "open", "quoted", "won", "lost"] as const).map(s => (
+                                <button key={s} onClick={() => setStatusFilter(s)}
+                                    className={`px-3 py-2 text-[10px] font-bold transition-colors ${statusFilter === s ? "bg-[#2C432D] text-white" : "text-[#9CA38C] hover:text-[#1A1A1A]"}`}>
+                                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    {filtered.map((shop, i) => (
-                        <motion.div key={shop.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                            className="bg-white rounded-2xl border border-[#E5E5E0] p-5 hover:shadow-md transition-all cursor-pointer"
-                            onClick={() => setSelectedShop(selectedShop?.id === shop.id ? null : shop)}>
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4A6741] to-[#6B8F71] flex items-center justify-center text-white text-xs font-bold">{shop.name.charAt(0)}{shop.name.split(" ")[1]?.charAt(0)}</div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-sm font-bold text-[#1A1A1A]">{shop.name}</p>
-                                        {shop.trend === "up" && <TrendingUp size={10} className="text-[#2E7D32]" />}
-                                        {shop.trend === "down" && <TrendingUp size={10} className="text-[#C53030] rotate-180" />}
-                                    </div>
-                                    <p className="text-[10px] text-[#9CA38C]">{shop.location} · {shop.reorderFreq} · Last order: {shop.lastOrder}</p>
-                                </div>
-                                <div className="flex items-center gap-4 flex-shrink-0">
-                                    <div className="text-center"><p className="text-sm font-bold text-[#1A1A1A]">{shop.totalOrders}</p><p className="text-[9px] text-[#9CA38C]">orders</p></div>
-                                    <div className="text-center"><p className="text-sm font-bold text-[#4A6741]">{formatCurrency(shop.totalSpent)}</p><p className="text-[9px] text-[#9CA38C]">lifetime</p></div>
-                                    {shop.rating > 0 && (
-                                        <div className="flex items-center gap-0.5">
-                                            <Star size={10} className="fill-[#B8860B] text-[#B8860B]" />
-                                            <span className="text-xs font-bold">{shop.rating}</span>
-                                        </div>
-                                    )}
-                                    <ChevronRight size={14} className="text-[#9CA38C]" />
-                                </div>
-                            </div>
-                            <AnimatePresence>
-                                {selectedShop?.id === shop.id && (
-                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                                        className="overflow-hidden">
-                                        <div className="mt-4 pt-4 border-t border-[#F0F0EC] grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                            <div className="bg-[#F7F7F5] rounded-xl p-3">
-                                                <p className="text-[9px] text-[#9CA38C]">Preferred Categories</p>
-                                                <div className="flex flex-wrap gap-1 mt-1">{shop.preferredCategories.map(c => <span key={c} className="text-[8px] px-1.5 py-0.5 bg-[#E8F5E9] text-[#4A6741] rounded">{c}</span>)}</div>
+
+                    {/* RFQ Cards */}
+                    {filtered.length === 0 ? (
+                        <div className="text-center py-12">
+                            <FileText size={32} className="text-[#E5E5E0] mx-auto mb-3" />
+                            <p className="text-sm text-[#9CA38C]">No RFQs match your filters</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {filtered.map((rfq, i) => {
+                                const uc = urgencyConfig[rfq.urgency];
+                                const UrgencyIcon = uc.icon;
+                                const margin = rfq.yourQuote ? ((rfq.yourQuote - rfq.targetPrice) / rfq.targetPrice * 100).toFixed(1) : null;
+                                return (
+                                    <motion.div key={rfq.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                                        className={`bg-white rounded-2xl border ${rfq.urgency === "critical" ? "border-l-[3px] border-l-[#C53030]" : rfq.urgency === "urgent" ? "border-l-[3px] border-l-[#F57F17]" : ""} border-[#E5E5E0] p-5 hover:shadow-md transition-all`}>
+                                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                            {/* Left: RFQ Info */}
+                                            <div className="flex items-start gap-4 flex-1 min-w-0">
+                                                <div className={`w-10 h-10 rounded-xl ${uc.bg} flex items-center justify-center flex-shrink-0`}>
+                                                    <Package size={18} className={uc.color} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                        <span className="text-[10px] font-bold text-[#9CA38C]">{rfq.id}</span>
+                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${uc.bg} ${uc.color} border ${uc.border} flex items-center gap-1`}>
+                                                            <UrgencyIcon size={8} /> {uc.label}
+                                                        </span>
+                                                        <span className="text-[9px] text-[#9CA38C] bg-[#F7F7F5] px-1.5 py-0.5 rounded">📍 {rfq.regionCode} Region</span>
+                                                        {rfq.status === "open" && rfq.competingQuotes === 0 && (
+                                                            <span className="text-[9px] font-bold text-[#2E7D32] bg-[#E8F5E9] px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                                                <Zap size={8} /> No quotes yet — be first!
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-sm font-bold text-[#1A1A1A] mb-1">{rfq.quantity}x {rfq.product}</p>
+                                                    <div className="flex flex-wrap items-center gap-3 text-[10px] text-[#9CA38C]">
+                                                        <span>{rfq.category}</span>
+                                                        <span>·</span>
+                                                        <span>Target: <strong className="text-[#1A1A1A]">{formatCurrency(rfq.targetPrice)}</strong>/unit</span>
+                                                        <span>·</span>
+                                                        <span>Market: <span className="text-[#6B7265]">{formatCurrency(rfq.marketPrice)}</span>/unit</span>
+                                                        <span>·</span>
+                                                        <span>{rfq.competingQuotes} quote{rfq.competingQuotes !== 1 ? "s" : ""} submitted</span>
+                                                    </div>
+                                                    {rfq.yourQuote && (
+                                                        <div className="mt-2 inline-flex items-center gap-2 bg-[#F2F5F0] px-2.5 py-1 rounded-lg border border-[#E5E5E0]">
+                                                            <span className="text-[10px] text-[#9CA38C]">Your Quote:</span>
+                                                            <span className="text-xs font-bold text-[#2C432D]">{formatCurrency(rfq.yourQuote)}/unit</span>
+                                                            {margin && <span className="text-[9px] text-[#4A6741]">+{margin}% vs target</span>}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="bg-[#F7F7F5] rounded-xl p-3">
-                                                <p className="text-[9px] text-[#9CA38C]">Avg Order Value</p>
-                                                <p className="text-sm font-bold text-[#1A1A1A] mt-0.5">{formatCurrency(Math.round(shop.totalSpent / shop.totalOrders))}</p>
-                                            </div>
-                                            <div className="bg-[#F7F7F5] rounded-xl p-3">
-                                                <p className="text-[9px] text-[#9CA38C]">Reorder Frequency</p>
-                                                <p className="text-sm font-bold text-[#1A1A1A] mt-0.5">{shop.reorderFreq}</p>
-                                            </div>
-                                            <div className="bg-[#F7F7F5] rounded-xl p-3 flex items-center justify-center">
-                                                <button onClick={(e) => { e.stopPropagation(); setShowOffer(true); }} className="flex items-center gap-1 px-3 py-1.5 bg-[#4A6741] text-white text-[10px] font-bold rounded-lg">
-                                                    <Send size={8} /> Send Offer
-                                                </button>
+
+                                            {/* Right: Actions + Timing */}
+                                            <div className="flex flex-col items-end gap-2 flex-shrink-0 min-w-[140px]">
+                                                <div className="text-right">
+                                                    <p className="text-[10px] text-[#9CA38C]">Received {rfq.receivedAt}</p>
+                                                    <p className={`text-xs font-bold mt-0.5 ${rfq.urgency === "critical" ? "text-[#C53030]" : rfq.urgency === "urgent" ? "text-[#F57F17]" : "text-[#6B7265]"}`}>
+                                                        ⏱ {rfq.expiresIn}
+                                                    </p>
+                                                </div>
+                                                {rfq.status === "open" ? (
+                                                    <button onClick={() => setQuoteModal(rfq)}
+                                                        className="w-full px-4 py-2.5 bg-[#2C432D] text-white text-xs font-bold rounded-xl hover:bg-[#1A2E1B] transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                                                        <Send size={12} /> Submit Quote
+                                                    </button>
+                                                ) : rfq.status === "quoted" ? (
+                                                    <span className="w-full px-4 py-2 bg-[#F2F5F0] text-[#4A6741] text-[10px] font-bold rounded-xl text-center border border-[#E5E5E0]">
+                                                        ✓ Quote Submitted
+                                                    </span>
+                                                ) : rfq.status === "won" ? (
+                                                    <span className="w-full px-4 py-2 bg-[#E8F5E9] text-[#2E7D32] text-[10px] font-bold rounded-xl text-center border border-[#2E7D32]/20">
+                                                        🏆 You Won
+                                                    </span>
+                                                ) : (
+                                                    <span className="w-full px-4 py-2 bg-[#F7F7F5] text-[#9CA38C] text-[10px] font-bold rounded-xl text-center border border-[#E5E5E0]">
+                                                        Not Selected
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
-                    ))}
-                </motion.div>
-            )}
-
-            {tab === "contracts" && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                    {/* Header Controls */}
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                        <div>
-                            <h2 className="text-sm font-bold text-[#1A1A1A]">Contracts & Direct Restocks</h2>
-                            <p className="text-[10px] text-[#9CA38C] mt-1 text-balance">View incoming restock requests from shops or send proactive direct offers.</p>
-                        </div>
-                        <button onClick={() => setShowOffer(true)} className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#2C432D] text-white text-xs font-bold rounded-xl shadow-sm hover:bg-[#1A2E1B] transition-colors">
-                            <Send size={12} /> New Direct Offer
-                        </button>
-                    </div>
-
-                    {/* Pending Requests Section */}
-                    {directOffers.some(o => o.type === "inbound_restock") && (
-                        <div className="space-y-4">
-                            <h3 className="text-xs font-bold text-[#6B7265] uppercase tracking-wide flex items-center gap-2">
-                                <Clock size={12} /> Incoming Restock Requests
-                            </h3>
-                            {directOffers.filter(o => o.type === "inbound_restock").map((req, i) => (
-                                <motion.div key={req.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                                    className="bg-white rounded-2xl border-l-[3px] border-l-[#F57F17] border border-[#E5E5E0] p-5 shadow-sm">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        <div className="flex items-start gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-[#FFF8E1] flex items-center justify-center flex-shrink-0">
-                                                <RefreshCcw size={18} className="text-[#F57F17]" />
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <p className="text-sm font-bold text-[#1A1A1A]">{req.shop}</p>
-                                                    <span className="text-[10px] text-[#9CA38C]">• Requesting Restock</span>
-                                                </div>
-                                                <p className="text-xs text-[#1A1A1A] font-medium">{req.qty}x {req.product}</p>
-                                                <div className="flex items-center gap-3 mt-2 text-[10px]">
-                                                    <span className="text-[#9CA38C]">Target Price: <strong className="text-[#1A1A1A]">${req.targetPrice}</strong></span>
-                                                    <span className="text-[#9CA38C]">Received: {req.date}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col gap-2 min-w-[120px]">
-                                            <button className="px-4 py-2 bg-[#2C432D] text-white text-[10px] font-bold rounded-lg hover:bg-[#1A2E1B] transition-colors w-full">Accept Order</button>
-                                            <button className="px-4 py-2 border border-[#E5E5E0] text-[#6B7265] text-[10px] font-bold rounded-lg hover:bg-[#F7F7F5] transition-colors w-full">Counter Offer</button>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
-
-                    {/* Proactive Offers Section */}
-                    <div className="space-y-4">
-                        <h3 className="text-xs font-bold text-[#6B7265] uppercase tracking-wide flex items-center gap-2">
-                            <Send size={12} /> Your Outbound Offers
-                        </h3>
-                        {directOffers.filter(o => o.type === "outbound_offer").map((offer, i) => (
-                            <motion.div key={offer.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                                className="bg-white rounded-2xl border border-[#E5E5E0] p-5">
-                                <div className="flex items-start sm:items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${offer.response === "accepted" ? "bg-[#E8F5E9]" : "bg-[#F7F7F5]"}`}>
-                                        {offer.response === "accepted" ? <CheckCircle2 size={18} className="text-[#2E7D32]" /> : <Send size={18} className="text-[#9CA38C]" />}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <p className="text-sm font-bold text-[#1A1A1A]">{offer.shop}</p>
-                                            <span className={`text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wide ${offer.response === "accepted" ? "bg-[#E8F5E9] text-[#2E7D32]" : "bg-[#F7F7F5] text-[#9CA38C]"}`}>
-                                                {offer.response === "accepted" ? "Accepted" : "Sent"}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs text-[#1A1A1A] font-medium">{offer.qty}x {offer.product}</p>
-                                        <div className="flex items-center gap-3 mt-2 text-[10px]">
-                                            <span className="text-[#9CA38C] line-through">${offer.regularPrice}</span>
-                                            <span className="font-bold text-[#4A6741]">Offered: ${offer.offerPrice}</span>
-                                            <span className="text-[#9CA38C]">· {offer.date}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
                 </motion.div>
             )}
 
+            {/* Feedback Tab */}
             {tab === "feedback" && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+                    <p className="text-xs text-[#9CA38C]">Anonymized feedback from completed RFQ orders. Shops can rate your performance after delivery.</p>
                     {feedbackItems.map((fb, i) => (
                         <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                             className="bg-white rounded-2xl border border-[#E5E5E0] p-5">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-[#F7F7F5] flex items-center justify-center text-[10px] font-bold text-[#6B7265]">{fb.shop.charAt(0)}</div>
-                                    <div><p className="text-xs font-bold text-[#1A1A1A]">{fb.shop}</p><p className="text-[9px] text-[#9CA38C]">{fb.date}</p></div>
+                                    <div className="w-8 h-8 rounded-full bg-[#F2F5F0] flex items-center justify-center">
+                                        <Shield size={12} className="text-[#4A6741]" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-[#1A1A1A]">{fb.rfqId}</p>
+                                        <p className="text-[9px] text-[#9CA38C]">{fb.date}</p>
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     {Array.from({ length: 5 }, (_, s) => <Star key={s} size={10} className={s < fb.rating ? "fill-[#B8860B] text-[#B8860B]" : "text-[#E5E5E0]"} />)}
@@ -251,7 +264,7 @@ export default function ShopCRMPage() {
                                 <p className="mt-2 text-[9px] text-[#4A6741] font-bold flex items-center gap-1"><CheckCircle2 size={8} /> You responded</p>
                             ) : (
                                 <button className="mt-2 flex items-center gap-1 text-[10px] font-bold text-[#4A6741] px-3 py-1 border border-[#4A6741]/30 rounded-lg hover:bg-[#E8F5E9]">
-                                    <MessageCircle size={8} /> Reply
+                                    <MessageCircle size={8} /> Reply via Ledger
                                 </button>
                             )}
                         </motion.div>
@@ -259,30 +272,62 @@ export default function ShopCRMPage() {
                 </motion.div>
             )}
 
-            {/* Send Offer Modal */}
+            {/* Submit Quote Modal */}
             <AnimatePresence>
-                {showOffer && (
+                {quoteModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowOffer(false)}>
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setQuoteModal(null)}>
                         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
                             className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="text-base font-bold text-[#1A1A1A] mb-4">Send Direct Offer</h3>
-                            <div className="space-y-3">
-                                <div><label className="text-xs font-medium block mb-1">Shop</label>
-                                    <select className="w-full px-4 py-2.5 bg-[#F7F7F5] border border-[#E5E5E0] rounded-xl text-sm outline-none">
-                                        {shops.map(s => <option key={s.id}>{s.name}</option>)}
-                                    </select>
-                                </div>
-                                <div><label className="text-xs font-medium block mb-1">Product</label><input type="text" placeholder="e.g. Nestle Milo 400G" className="w-full px-4 py-2.5 bg-[#F7F7F5] border border-[#E5E5E0] rounded-xl text-sm outline-none focus:border-[#2C432D]" /></div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div><label className="text-xs font-medium block mb-1">Offer Price ($)</label><input type="number" placeholder="140" className="w-full px-4 py-2.5 bg-[#F7F7F5] border border-[#E5E5E0] rounded-xl text-sm outline-none focus:border-[#2C432D]" /></div>
-                                    <div><label className="text-xs font-medium block mb-1">Quantity</label><input type="number" placeholder="200" className="w-full px-4 py-2.5 bg-[#F7F7F5] border border-[#E5E5E0] rounded-xl text-sm outline-none focus:border-[#2C432D]" /></div>
-                                </div>
-                                <div><label className="text-xs font-medium block mb-1">Message</label><textarea placeholder="Exclusive pricing for your next order..." rows={2} className="w-full px-4 py-2.5 bg-[#F7F7F5] border border-[#E5E5E0] rounded-xl text-sm outline-none resize-none focus:border-[#2C432D]" /></div>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-base font-bold text-[#1A1A1A]">Submit Quote</h3>
+                                <button onClick={() => setQuoteModal(null)} className="p-1 rounded-lg hover:bg-[#F7F7F5]"><X size={16} className="text-[#9CA38C]" /></button>
                             </div>
+
+                            {/* RFQ Summary */}
+                            <div className="bg-[#F7F7F5] rounded-xl p-4 mb-4 border border-[#E5E5E0]">
+                                <p className="text-[10px] font-bold text-[#9CA38C] mb-1">{quoteModal.id} · {quoteModal.regionCode} Region</p>
+                                <p className="text-sm font-bold text-[#1A1A1A]">{quoteModal.quantity}x {quoteModal.product}</p>
+                                <div className="flex items-center gap-3 mt-2 text-[10px]">
+                                    <span className="text-[#9CA38C]">Target: <strong className="text-[#1A1A1A]">{formatCurrency(quoteModal.targetPrice)}</strong>/unit</span>
+                                    <span className="text-[#9CA38C]">Market: <strong className="text-[#6B7265]">{formatCurrency(quoteModal.marketPrice)}</strong>/unit</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs font-medium block mb-1">Your Price ($/unit)</label>
+                                        <input type="number" placeholder={quoteModal.targetPrice.toFixed(2)} className="w-full px-4 py-2.5 bg-[#F7F7F5] border border-[#E5E5E0] rounded-xl text-sm outline-none focus:border-[#2C432D]" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium block mb-1">Delivery Time</label>
+                                        <select className="w-full px-4 py-2.5 bg-[#F7F7F5] border border-[#E5E5E0] rounded-xl text-sm outline-none">
+                                            <option>Tomorrow</option>
+                                            <option>2 Days</option>
+                                            <option>3 Days</option>
+                                            <option>1 Week</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium block mb-1">Notes (optional)</label>
+                                    <textarea placeholder="Additional details about your offer..." rows={2}
+                                        className="w-full px-4 py-2.5 bg-[#F7F7F5] border border-[#E5E5E0] rounded-xl text-sm outline-none resize-none focus:border-[#2C432D]" />
+                                </div>
+                            </div>
+
+                            {/* Trust Notice */}
+                            <div className="flex items-start gap-2 mt-4 p-3 bg-[#F2F5F0] rounded-xl border border-[#E5E5E0]">
+                                <Shield size={14} className="text-[#4A6741] mt-0.5 flex-shrink-0" />
+                                <p className="text-[9px] text-[#6B7265] leading-relaxed">
+                                    Your quote will be submitted through Ledger. The shop&apos;s identity will only be revealed after order confirmation. Payment is held in escrow until delivery is verified.
+                                </p>
+                            </div>
+
                             <div className="flex gap-3 mt-5">
-                                <button onClick={() => setShowOffer(false)} className="flex-1 px-4 py-2.5 border border-[#E5E5E0] text-sm font-medium text-[#6B7265] rounded-xl">Cancel</button>
-                                <button onClick={() => setShowOffer(false)} className="flex-1 px-4 py-2.5 bg-[#2C432D] text-white text-sm font-medium rounded-xl flex items-center justify-center gap-1"><Send size={12} /> Send</button>
+                                <button onClick={() => setQuoteModal(null)} className="flex-1 px-4 py-2.5 border border-[#E5E5E0] text-sm font-medium text-[#6B7265] rounded-xl">Cancel</button>
+                                <button onClick={() => setQuoteModal(null)} className="flex-1 px-4 py-2.5 bg-[#2C432D] text-white text-sm font-medium rounded-xl flex items-center justify-center gap-1"><Send size={12} /> Submit Quote</button>
                             </div>
                         </motion.div>
                     </motion.div>
