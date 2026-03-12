@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
-import logo from "../../public/logo.png";
+import logo from "../../public/restock-logo.png";
 
 const navLinks = [
     { label: "Platform", href: "#platform" },
@@ -40,14 +40,9 @@ export default function Navbar() {
                     <a href="#" className="flex items-center gap-2.5 group">
                         <Image
                             src={logo}
-                            alt="Ledger"
-                            width={36}
-                            height={36}
-                            className="rounded-lg"
+                            alt="ReStock"
+                            className="h-24 w-auto object-contain"
                         />
-                        <span className="text-xl font-bold tracking-tight text-foreground">
-                            LEDGER
-                        </span>
                     </a>
 
                     {/* Desktop Nav */}

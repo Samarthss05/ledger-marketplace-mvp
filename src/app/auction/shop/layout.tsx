@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import logo from "../../../../public/logo.png";
+import logo from "../../../../public/restock-logo.png";
 import { usePathname } from "next/navigation";
 import {
     Store, ShoppingBag, Layers, ClipboardList, Bell, LogOut,
@@ -48,11 +48,10 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
         <div className="min-h-screen bg-[#F7F7F5]">
             <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-[#E5E5E0]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-14">
+                    <div className="flex items-center justify-between h-20">
                         <div className="flex items-center gap-4">
                             <Link href="/auction" className="flex items-center gap-2">
-                                <Image src={logo} alt="Ledger" width={28} height={28} className="rounded-lg" />
-                                <span className="text-base font-bold tracking-tight text-[#2C432D] hidden sm:block">Ledger</span>
+                                <Image src={logo} alt="ReStock" className="h-[64px] w-auto object-contain -ml-3" />
                             </Link>
                             <div className="h-5 w-px bg-[#E5E5E0]" />
                             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#E8F5E9] rounded-lg">

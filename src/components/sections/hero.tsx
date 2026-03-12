@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import Image from "next/image";
-import logo from "../../../public/logo.png";
+import logo from "../../../public/restock-logo.png";
 
 export default function Hero() {
     return (
@@ -38,7 +38,7 @@ export default function Hero() {
                         transition={{ duration: 0.5, delay: 0.05 }}
                         className="mb-8"
                     >
-                        <Image src={logo} alt="Ledger" width={72} height={72} className="rounded-2xl" />
+                        <Image src={logo} alt="ReStock" className="h-48 w-auto object-contain" />
                     </motion.div>
 
                     {/* Headline */}
