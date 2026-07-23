@@ -25,8 +25,8 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
     const notifications = [
         { id: "n1", title: "Quotes ready", desc: "Three supplier quotes are ready for your August replenishment order.", time: "10m ago", read: false, type: "success" },
         { id: "n2", title: "AI price insight", desc: "Your rice target could be reduced by 8% without limiting supplier coverage.", time: "2h ago", read: false, type: "alert" },
-        { id: "n3", title: "Order Shipped", desc: "Order #ORD-2918 from Metro Foods is on its way.", time: "5h ago", read: true, type: "info" },
-        { id: "n4", title: "Supplier responded", desc: "Pacific Foods submitted an offer for RFQ-4901.", time: "1d ago", read: true, type: "info" },
+        { id: "n3", title: "Ninja Van pickup", desc: "Order #ORD-2918 is now in the Ninja Van network.", time: "5h ago", read: true, type: "info" },
+        { id: "n4", title: "Supplier responded", desc: "Verified Supplier A submitted an offer for RFQ-4901.", time: "1d ago", read: true, type: "info" },
     ];
 
     const isActive = (href: string) => {

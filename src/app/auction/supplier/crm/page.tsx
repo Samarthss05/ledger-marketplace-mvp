@@ -102,7 +102,7 @@ export default function SupplierRFQCenter() {
                     </p>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-xl border border-[#DDE5DC] bg-white px-3 py-2 text-[10px] font-semibold text-[#4F6F56]">
-                    <ShieldCheck size={13} /> Retailer identity protected until award
+                    <ShieldCheck size={13} /> Retailer identity protected throughout
                 </div>
             </div>
 

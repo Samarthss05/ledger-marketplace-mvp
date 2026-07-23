@@ -20,6 +20,7 @@ import {
     Users,
 } from "lucide-react";
 import {
+    getSupplierAlias,
     type SourcingRequest,
     type SupplierQuote,
     useOrderWorkflowStore,
@@ -263,7 +264,10 @@ export default function SourcingRequestsPage() {
                                                     <Bot size={18} className="mt-0.5 text-[#4F6F56]" />
                                                     <div>
                                                         <p className="text-xs font-bold text-[#2F312F]">
-                                                            ReStock AI recommends {recommendation.supplierName}
+                                                            ReStock AI recommends{" "}
+                                                            {getSupplierAlias(
+                                                                recommendation.supplierId
+                                                            )}
                                                         </p>
                                                         <p className="mt-1 text-[10px] leading-5 text-[#666B66]">
                                                             It has the strongest balance of price, delivery speed,
@@ -279,6 +283,9 @@ export default function SourcingRequestsPage() {
                                                         <QuoteCard
                                                             key={quote.id}
                                                             quote={quote}
+                                                            supplierLabel={getSupplierAlias(
+                                                                quote.supplierId
+                                                            )}
                                                             recommended={quoteIndex === 0}
                                                             awarded={request.awardedQuoteId === quote.id}
                                                             disabled={request.status === "awarded"}
@@ -350,12 +357,14 @@ function StatusChip({ status }: { status: SourcingRequest["status"] }) {
 
 function QuoteCard({
     quote,
+    supplierLabel,
     recommended,
     awarded,
     disabled,
     onSelect,
 }: {
     quote: SupplierQuote;
+    supplierLabel: string;
     recommended: boolean;
     awarded: boolean;
     disabled: boolean;
@@ -374,7 +383,7 @@ function QuoteCard({
             )}
             <div className="mt-1 flex items-start justify-between gap-3">
                 <div>
-                    <p className="text-xs font-bold text-[#2F312F]">{quote.supplierName}</p>
+                    <p className="text-xs font-bold text-[#2F312F]">{supplierLabel}</p>
                     <p className="mt-1 text-[10px] text-[#8A918A]">{quote.paymentTerms}</p>
                 </div>
                 <div className="rounded-xl bg-[#EDF3EC] px-2.5 py-2 text-center">

@@ -23,6 +23,7 @@ import {
     Users,
 } from "lucide-react";
 import {
+    getSupplierAlias,
     type OrderLine,
     useOrderWorkflowStore,
 } from "../../../lib/order-workflow-store";
@@ -655,14 +656,14 @@ export default function CreateOrderPage() {
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#365845] text-xs font-bold text-white">
-                                                {supplier.avatar}
+                                                S{index + 1}
                                             </div>
                                             <div>
                                                 <p className="text-xs font-bold text-[#2F312F]">
-                                                    {supplier.companyName}
+                                                    {getSupplierAlias(supplier.id)}
                                                 </p>
                                                 <p className="mt-0.5 text-[10px] text-[#8A918A]">
-                                                    {supplier.location.city}
+                                                    Identity protected · coverage confirmed
                                                 </p>
                                             </div>
                                         </div>

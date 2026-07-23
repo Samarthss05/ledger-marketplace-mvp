@@ -14,7 +14,10 @@ import {
     Truck,
 } from "lucide-react";
 import StatusBadge from "../components/status-badge";
-import { useOrderWorkflowStore } from "../lib/order-workflow-store";
+import {
+    isFulfillmentOrder,
+    useOrderWorkflowStore,
+} from "../lib/order-workflow-store";
 import { formatCurrency, orders } from "../lib/mock-data";
 
 export default function ShopDashboard() {
@@ -277,7 +280,9 @@ export default function ShopDashboard() {
                                             {order.productName}
                                         </p>
                                         <p className="mt-1 text-[10px] text-[#8A918A]">
-                                            {order.supplierName}
+                                            {isFulfillmentOrder(order)
+                                                ? order.supplierAlias
+                                                : "Verified supplier"}
                                         </p>
                                     </div>
                                     <StatusBadge status={order.status} />

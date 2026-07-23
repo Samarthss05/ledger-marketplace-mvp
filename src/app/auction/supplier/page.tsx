@@ -12,7 +12,10 @@ import {
 import Link from "next/link";
 import StatusBadge from "../components/status-badge";
 import { mergeAuctionBids, useSupplierBidStore } from "../lib/bid-store";
-import { useOrderWorkflowStore } from "../lib/order-workflow-store";
+import {
+    isFulfillmentOrder,
+    useOrderWorkflowStore,
+} from "../lib/order-workflow-store";
 import {
     auctions,
     formatCurrency,
@@ -314,7 +317,10 @@ export default function SupplierDashboard() {
                                             {order.productName}
                                         </p>
                                         <p className="mt-1 text-xs text-[#8A918A]">
-                                            {order.quantity.toLocaleString()} units · {order.shopName}
+                                            {order.quantity.toLocaleString()} units ·{" "}
+                                            {isFulfillmentOrder(order)
+                                                ? order.retailerAlias
+                                                : "Protected retailer"}
                                         </p>
                                     </div>
                                     <StatusBadge status={order.status} />
