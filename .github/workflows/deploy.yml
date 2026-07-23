@@ -72,6 +72,9 @@ jobs:
 
   # Deployment job
   deploy:
+    # GitHub Pages only permits the protected production branch to deploy.
+    # Manual runs on other branches still build successfully, then skip this job.
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
