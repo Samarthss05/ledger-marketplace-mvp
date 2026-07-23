@@ -9,22 +9,22 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Ledger — The Operating System for Traditional Retail",
+  title: "ReStock by Ledger — Smarter retail procurement",
   description:
-    "Ledger transforms traditional retail with AI-powered procurement, demand auctions, digital cooperatives, and embedded finance. The indispensable infrastructure powering ASEAN's retail revolution.",
+    "ReStock by Ledger connects independent retailers and trusted suppliers in one procurement workspace for demand planning, competitive bidding, ordering, and fulfillment.",
   keywords: [
     "B2B",
-    "retail OS",
-    "traditional retail",
-    "AI procurement",
-    "ASEAN",
-    "supply chain",
-    "embedded finance",
+    "retail procurement",
+    "supplier marketplace",
+    "demand aggregation",
+    "Southeast Asia",
+    "ReStock",
+    "Ledger",
   ],
   openGraph: {
-    title: "Ledger — The Operating System for Traditional Retail",
+    title: "ReStock by Ledger — Smarter retail procurement",
     description:
-      "The indispensable infrastructure powering ASEAN's retail revolution.",
+      "One procurement workspace for retailers and suppliers across Southeast Asia.",
     type: "website",
   },
 };
@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body className={`${inter.variable} font-sans antialiased noise-bg`}>
         {children}
       </body>

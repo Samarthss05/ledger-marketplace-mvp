@@ -1,13 +1,12 @@
 import { Github, Linkedin, Twitter } from "lucide-react";
-import Image from "next/image";
-import logo from "../../public/restock-logo.png";
+import { BrandLockup } from "@/components/brand-lockup";
 
 const footerLinks = {
     Platform: [
-        { label: "Sentient OS", href: "#platform" },
-        { label: "Demand Auction", href: "#features" },
-        { label: "Digital Cooperative", href: "#ecosystem" },
-        { label: "Embedded Bank", href: "#finance" },
+        { label: "Retailer workspace", href: "/auction/shop" },
+        { label: "Supplier workspace", href: "/auction/supplier" },
+        { label: "Demand marketplace", href: "/auction" },
+        { label: "Ledger finance", href: "#finance" },
     ],
     Company: [
         { label: "About", href: "#" },
@@ -31,10 +30,10 @@ export default function Footer() {
                     {/* Brand */}
                     <div className="col-span-2 md:col-span-1">
                         <div className="flex items-center gap-2 mb-4">
-                            <Image src={logo} alt="ReStock" className="h-20 w-auto object-contain" />
+                            <BrandLockup size="lg" />
                         </div>
                         <p className="text-sm text-muted leading-relaxed mb-6 max-w-xs">
-                            The operating system powering the future of traditional retail across ASEAN.
+                            Smarter retail procurement for independent shops and suppliers across Southeast Asia.
                         </p>
                         <div className="flex gap-3">
                             {[Twitter, Linkedin, Github].map((Icon, i) => (
@@ -74,7 +73,7 @@ export default function Footer() {
                 {/* Bottom */}
                 <div className="mt-14 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
                     <p className="text-xs text-muted">
-                        © {new Date().getFullYear()} Ledger. All rights reserved.
+                        © {new Date().getFullYear()} ReStock by Ledger. All rights reserved.
                     </p>
                     <div className="flex gap-6">
                         {["Privacy", "Terms", "Cookies"].map((item) => (

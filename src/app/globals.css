@@ -2,23 +2,23 @@
 
 @theme inline {
   /* Light theme palette */
-  --color-background: #FFFFFF;
-  --color-foreground: #1A1A1A;
-  --color-primary: #4A6741;
-  --color-primary-light: #5C7D53;
-  --color-primary-lighter: #6B8F61;
-  --color-primary-dark: #3D5A35;
-  --color-primary-darkest: #2C432D;
-  --color-accent: #6B8F71;
-  --color-green-bg: #3D5A3E;
-  --color-green-bg-light: #4A6B4B;
-  --color-surface: #F7F7F5;
-  --color-surface-alt: #F0F0EC;
-  --color-surface-green: #F2F5F0;
-  --color-muted: #6B7265;
-  --color-muted-light: #9CA38C;
-  --color-border: #E5E5E0;
-  --color-border-green: rgba(61, 90, 62, 0.15);
+  --color-background: #FAFBF8;
+  --color-foreground: #2F312F;
+  --color-primary: #6F9277;
+  --color-primary-light: #89A98D;
+  --color-primary-lighter: #A9BEAB;
+  --color-primary-dark: #4F6F56;
+  --color-primary-darkest: #375D49;
+  --color-accent: #89A98D;
+  --color-green-bg: #4F6F56;
+  --color-green-bg-light: #6F9277;
+  --color-surface: #F4F7F3;
+  --color-surface-alt: #EDF3EC;
+  --color-surface-green: #EDF3EC;
+  --color-muted: #666B66;
+  --color-muted-light: #8A918A;
+  --color-border: #DDE5DC;
+  --color-border-green: rgba(79, 111, 86, 0.16);
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
@@ -46,6 +46,9 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+    background-image:
+      radial-gradient(circle at top left, rgba(111, 146, 119, 0.08), transparent 24%),
+      linear-gradient(180deg, #FAFBF8 0%, #F8FAF6 50%, #F4F7F3 100%);
   }
 
   ::selection {

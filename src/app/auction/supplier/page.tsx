@@ -109,7 +109,7 @@ export default function SupplierDashboard() {
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/10">
                                     <Sparkles size={10} className="text-[#A8C89A]" />
-                                    <span className="text-[9px] font-medium text-[#A8C89A] uppercase tracking-wider">AI-Powered Dashboard</span>
+                                    <span className="text-[9px] font-medium text-[#A8C89A] uppercase tracking-wider">ReStock Supplier Workspace</span>
                                 </div>
                             </div>
                             <h1 className="text-xl font-bold text-white">Welcome back, {me.companyName}</h1>
@@ -531,7 +531,7 @@ export default function SupplierDashboard() {
                                         <div className="flex items-center gap-2 text-[10px] text-[#9CA38C]">
                                             <span>{auction.totalQuantity.toLocaleString()} units</span>
                                             <span>·</span>
-                                            <span>${auction.reservePrice}/unit</span>
+                                            <span>${auction.reservePrice.toFixed(2)}/unit</span>
                                             <span>·</span>
                                             <StatusBadge status={auction.auctionType} />
                                         </div>
@@ -606,7 +606,7 @@ export default function SupplierDashboard() {
                                             )}
                                         </div>
                                         <div className="flex justify-between text-[10px] text-[#9CA38C]">
-                                            <span>Your bid: ${bid.pricePerUnit}/unit</span>
+                                            <span>Your bid: ${bid.pricePerUnit.toFixed(2)}/unit</span>
                                             <span>{formatCurrency(bid.totalPrice)}</span>
                                         </div>
                                     </div>
@@ -742,8 +742,8 @@ export default function SupplierDashboard() {
 
                             <div className="bg-[#F2F5F0] rounded-xl p-3 border border-[#E5E5E0] mb-4">
                                 <p className="text-[10px] text-[#4A6741] leading-relaxed">
-                                    <strong>How it works:</strong> Ledger will send this offer to all {flashSaleModal.matchedShops} matched shops in your region.
-                                    Orders are placed through Ledger with escrow protection. You&apos;ll be notified of each order.
+                                    <strong>How it works:</strong> ReStock will send this offer to all {flashSaleModal.matchedShops} matched shops in your region.
+                                    Orders are placed in ReStock with escrow protection from Ledger. You&apos;ll be notified of each order.
                                 </p>
                             </div>
 

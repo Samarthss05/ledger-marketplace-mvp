@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
-import Image from "next/image";
-import logo from "../../public/restock-logo.png";
+import { BrandLockup } from "@/components/brand-lockup";
 
 const navLinks = [
     { label: "Platform", href: "#platform" },
@@ -38,11 +37,7 @@ export default function Navbar() {
                 <div className="flex h-16 items-center justify-between lg:h-20">
                     {/* Logo */}
                     <a href="#" className="flex items-center gap-2.5 group">
-                        <Image
-                            src={logo}
-                            alt="ReStock"
-                            className="h-24 w-auto object-contain"
-                        />
+                        <BrandLockup size="md" />
                     </a>
 
                     {/* Desktop Nav */}

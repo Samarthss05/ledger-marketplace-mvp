@@ -85,10 +85,10 @@ export default function SupplierRFQCenter() {
                         <h1 className="text-xl font-bold text-[#1A1A1A]">RFQ Response Center</h1>
                         <span className="flex items-center gap-1 px-2 py-0.5 bg-[#F2F5F0] rounded-full border border-[#E5E5E0]">
                             <Shield size={10} className="text-[#4A6741]" />
-                            <span className="text-[8px] font-bold text-[#4A6741] uppercase tracking-wider">Ledger Protected</span>
+                            <span className="text-[8px] font-bold text-[#4A6741] uppercase tracking-wider">ReStock Protected</span>
                         </span>
                     </div>
-                    <p className="text-sm text-[#6B7265] mt-0.5">Respond to purchase requests from verified shops. All transactions are routed through Ledger.</p>
+                    <p className="text-sm text-[#6B7265] mt-0.5">Respond to purchase requests from verified shops. Every transaction stays inside ReStock.</p>
                 </div>
                 <div className="flex bg-white border border-[#E5E5E0] rounded-xl overflow-hidden shadow-sm">
                     {(["rfqs", "history", "feedback"] as const).map(t => (
@@ -107,7 +107,7 @@ export default function SupplierRFQCenter() {
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-[#1A1A1A]">All shop identities are protected</p>
-                    <p className="text-[10px] text-[#9CA38C] mt-0.5">Shop details are anonymized until an order is confirmed. All payments, deliveries, and communications are managed through Ledger to ensure trust and security for both parties.</p>
+                    <p className="text-[10px] text-[#9CA38C] mt-0.5">Shop details are anonymized until an order is confirmed. Payments, deliveries, and communications stay in ReStock, with Ledger providing the trust layer.</p>
                 </div>
             </motion.div>
 
@@ -264,7 +264,7 @@ export default function SupplierRFQCenter() {
                                 <p className="mt-2 text-[9px] text-[#4A6741] font-bold flex items-center gap-1"><CheckCircle2 size={8} /> You responded</p>
                             ) : (
                                 <button className="mt-2 flex items-center gap-1 text-[10px] font-bold text-[#4A6741] px-3 py-1 border border-[#4A6741]/30 rounded-lg hover:bg-[#E8F5E9]">
-                                    <MessageCircle size={8} /> Reply via Ledger
+                                    <MessageCircle size={8} /> Reply in ReStock
                                 </button>
                             )}
                         </motion.div>
@@ -321,7 +321,7 @@ export default function SupplierRFQCenter() {
                             <div className="flex items-start gap-2 mt-4 p-3 bg-[#F2F5F0] rounded-xl border border-[#E5E5E0]">
                                 <Shield size={14} className="text-[#4A6741] mt-0.5 flex-shrink-0" />
                                 <p className="text-[9px] text-[#6B7265] leading-relaxed">
-                                    Your quote will be submitted through Ledger. The shop&apos;s identity will only be revealed after order confirmation. Payment is held in escrow until delivery is verified.
+                                    Your quote will be submitted through ReStock. The shop&apos;s identity will only be revealed after order confirmation. Payment is held in escrow until delivery is verified.
                                 </p>
                             </div>
 

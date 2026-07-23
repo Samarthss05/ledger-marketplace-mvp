@@ -65,7 +65,7 @@ export default function ShopDashboard() {
                         <div className="flex items-center gap-2 mb-1">
                             <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/10">
                                 <Sparkles size={10} className="text-[#A8C89A]" />
-                                <span className="text-[9px] font-medium text-[#A8C89A] uppercase tracking-wider">Smart Procurement</span>
+                                <span className="text-[9px] font-medium text-[#A8C89A] uppercase tracking-wider">ReStock Retailer Workspace</span>
                             </div>
                         </div>
                         <h1 className="text-xl font-bold text-white">Welcome back, RK Minimart</h1>
@@ -87,10 +87,10 @@ export default function ShopDashboard() {
             {/* Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { icon: TrendingDown, label: "Total Savings", value: "$24,800", sub: "vs retail prices", accent: "from-[#2C432D] to-[#4A6741]" },
-                    { icon: ShoppingBag, label: "Active Auctions", value: activeAuctions.length.toString(), sub: "you can join now", accent: "from-[#3B6B9B] to-[#5A8DB8]" },
-                    { icon: Layers, label: "Demand Requests", value: myDemand.length.toString(), sub: "being aggregated", accent: "from-[#B8860B] to-[#D4A017]" },
-                    { icon: Package, label: "Orders This Month", value: myOrders.length.toString(), sub: `${myOrders.filter(o => o.status === "delivered").length} delivered`, accent: "from-[#7B1FA2] to-[#9C27B0]" },
+                    { icon: TrendingDown, label: "Total Savings", value: "$24,800", sub: "vs retail prices", accent: "from-[#375D49] to-[#4F6F56]" },
+                    { icon: ShoppingBag, label: "Active Auctions", value: activeAuctions.length.toString(), sub: "you can join now", accent: "from-[#4F6F56] to-[#6F9277]" },
+                    { icon: Layers, label: "Demand Requests", value: myDemand.length.toString(), sub: "being aggregated", accent: "from-[#6F9277] to-[#89A98D]" },
+                    { icon: Package, label: "Orders This Month", value: myOrders.length.toString(), sub: `${myOrders.filter(o => o.status === "delivered").length} delivered`, accent: "from-[#597E66] to-[#A9BEAB]" },
                 ].map((stat, i) => (
                     <motion.div key={stat.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: 0.1 + i * 0.05 }}
@@ -194,7 +194,7 @@ export default function ShopDashboard() {
                     </div>
                     <div>
                         <h2 className="text-sm font-bold text-[#1A1A1A]">AI Insights & Predictions</h2>
-                        <p className="text-[10px] text-[#9CA38C]">Powered by Ledger Intelligence Engine</p>
+                        <p className="text-[10px] text-[#9CA38C]">ReStock Intelligence · Built by Ledger</p>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -282,7 +282,7 @@ export default function ShopDashboard() {
                                             {lowestBid ? (
                                                 <p className="text-sm font-bold text-[#4A6741]">${lowestBid}/unit</p>
                                             ) : (
-                                                <p className="text-sm font-bold text-[#1A1A1A]">${auction.reservePrice}/unit</p>
+                                                <p className="text-sm font-bold text-[#1A1A1A]">${auction.reservePrice.toFixed(2)}/unit</p>
                                             )}
                                         </div>
                                         <button onClick={() => setWishlist(prev => { const n = new Set(prev); isFav ? n.delete(auction.id) : n.add(auction.id); return n; })}

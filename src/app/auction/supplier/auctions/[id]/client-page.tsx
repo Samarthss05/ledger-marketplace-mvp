@@ -389,7 +389,7 @@ export default function SupplierBidPageClient({ params }: { params: Promise<{ id
                                     <div className="bg-gradient-to-r from-[#F7F7F5] to-[#F2F5F0] rounded-xl p-4 space-y-2">
                                         <h3 className="text-xs font-bold text-[#1A1A1A]">Revenue Breakdown</h3>
                                         <div className="flex justify-between text-xs"><span className="text-[#9CA38C]">Gross revenue</span><span className="font-medium">{formatCurrency(totalValue)}</span></div>
-                                        <div className="flex justify-between text-xs"><span className="text-[#9CA38C]">Ledger platform fee (3%)</span><span className="font-medium text-[#C53030]">-{formatCurrency(fee)}</span></div>
+                                        <div className="flex justify-between text-xs"><span className="text-[#9CA38C]">ReStock platform fee (3%)</span><span className="font-medium text-[#C53030]">-{formatCurrency(fee)}</span></div>
                                         <div className="border-t border-[#E5E5E0] pt-2 flex justify-between"><span className="text-xs text-[#9CA38C]">Net revenue</span><span className="text-base font-bold text-[#2C432D]">{formatCurrency(netRevenue)}</span></div>
                                     </div>
 
@@ -468,7 +468,7 @@ export default function SupplierBidPageClient({ params }: { params: Promise<{ id
                         <h3 className="text-sm font-bold mb-3">Revenue Estimate</h3>
                         <div className="space-y-2">
                             <div className="flex justify-between"><span className="text-xs text-white/60">Revenue at {currentPrice > 0 ? "your price" : "reserve"}</span><span className="text-sm font-bold">{formatCurrency(currentPrice > 0 ? totalValue : auction.reservePrice * auction.totalQuantity)}</span></div>
-                            <div className="flex justify-between"><span className="text-xs text-white/60">Ledger fee (3%)</span><span className="text-sm font-bold">-{formatCurrency(currentPrice > 0 ? fee : auction.reservePrice * auction.totalQuantity * 0.03)}</span></div>
+                            <div className="flex justify-between"><span className="text-xs text-white/60">ReStock fee (3%)</span><span className="text-sm font-bold">-{formatCurrency(currentPrice > 0 ? fee : auction.reservePrice * auction.totalQuantity * 0.03)}</span></div>
                             <div className="border-t border-white/20 pt-2 flex justify-between"><span className="text-xs text-white/60">Net revenue</span><span className="text-lg font-bold">{formatCurrency(currentPrice > 0 ? netRevenue : auction.reservePrice * auction.totalQuantity * 0.97)}</span></div>
                         </div>
                     </motion.div>

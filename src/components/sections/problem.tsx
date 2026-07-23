@@ -117,7 +117,7 @@ export default function Problem() {
                         href="#platform"
                         className="group inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-dark transition-colors"
                     >
-                        See how Ledger solves this
+                        See how ReStock solves this
                         <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                     </a>
                 </motion.div>
