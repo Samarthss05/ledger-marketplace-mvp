@@ -2,15 +2,21 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Gavel, Trophy, XCircle, Clock, DollarSign } from "lucide-react";
+import { Gavel, Trophy, XCircle, Clock } from "lucide-react";
 import StatusBadge from "../../components/status-badge";
+import { mergeAuctionBids, useSupplierBidStore } from "../../lib/bid-store";
 import { auctions, formatCurrency } from "../../lib/mock-data";
 
 type Tab = "active" | "won" | "lost";
 
 export default function SupplierBids() {
     const [tab, setTab] = useState<Tab>("active");
-    const allBids = auctions.flatMap((a) => a.bids.filter((b) => b.supplierId === "SUP-001").map((b) => ({ ...b, auction: a })));
+    const { bids: storedBids } = useSupplierBidStore();
+    const allBids = auctions.flatMap((auction) =>
+        mergeAuctionBids(auction, storedBids)
+            .filter((bid) => bid.supplierId === "SUP-001")
+            .map((bid) => ({ ...bid, auction }))
+    );
     const activeBids = allBids.filter((b) => b.status === "active");
     const wonBids = allBids.filter((b) => b.status === "won");
     const lostBids = allBids.filter((b) => b.status === "lost");

@@ -1,26 +1,26 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     ArrowLeft, Clock, Users, Package, Gavel, DollarSign, CheckCircle2,
-    AlertCircle, X, Send, Sparkles, Brain, Target, TrendingUp, TrendingDown,
-    Shield, Truck, Star, ChevronRight, Info, Zap,
+    AlertCircle, Send, Brain, Target, Shield, Truck, Star, ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import StatusBadge from "../../../components/status-badge";
 import { WinProbabilityGauge, BidStrategyAdvisor, AIInsightCard } from "../../../components/ai-insights";
+import { mergeAuctionBids, useSupplierBidStore } from "../../../lib/bid-store";
 import { auctions, suppliers, formatCurrency } from "../../../lib/mock-data";
 
 export default function SupplierBidPageClient({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const auction = auctions.find((a) => a.id === id);
     const me = suppliers.find((s) => s.id === "SUP-001")!;
+    const { bids: storedBids, submitBid } = useSupplierBidStore();
 
     const [bidStep, setBidStep] = useState<"overview" | "strategy" | "configure" | "review" | "submitted">("overview");
     const [selectedStrategy, setSelectedStrategy] = useState<"conservative" | "recommended" | "aggressive" | "custom">("recommended");
     const [price, setPrice] = useState("");
-    const [quantity, setQuantity] = useState("");
     const [deliveryDays, setDeliveryDays] = useState("7");
     const [paymentTerms, setPaymentTerms] = useState("Net 30");
     const [notes, setNotes] = useState("");
@@ -37,8 +37,9 @@ export default function SupplierBidPageClient({ params }: { params: Promise<{ id
         );
     }
 
-    const sortedBids = [...auction.bids].sort((a, b) => a.pricePerUnit - b.pricePerUnit);
-    const myExistingBid = auction.bids.find((b) => b.supplierId === "SUP-001");
+    const auctionBids = mergeAuctionBids(auction, storedBids);
+    const sortedBids = [...auctionBids].sort((a, b) => a.pricePerUnit - b.pricePerUnit);
+    const myExistingBid = auctionBids.find((b) => b.supplierId === "SUP-001");
     const lowestBid = sortedBids.length > 0 ? sortedBids[0].pricePerUnit : null;
     const avgBid = sortedBids.length > 0 ? Math.round(sortedBids.reduce((s, b) => s + b.pricePerUnit, 0) / sortedBids.length) : null;
 
@@ -69,6 +70,27 @@ export default function SupplierBidPageClient({ params }: { params: Promise<{ id
     const stepLabels = ["Overview", "AI Strategy", "Configure Bid", "Review & Submit"];
     const stepKeys: typeof bidStep[] = ["overview", "strategy", "configure", "review"];
     const currentStepIndex = stepKeys.indexOf(bidStep);
+    const handleSubmitBid = () => {
+        const submittedAt = new Date();
+        const deliveryDate = new Date(
+            submittedAt.getTime() + Number(deliveryDays) * 24 * 60 * 60 * 1000
+        );
+
+        submitBid({
+            id: `BID-${submittedAt.getTime()}`,
+            auctionId: auction.id,
+            supplierId: me.id,
+            supplierName: me.companyName,
+            pricePerUnit: currentPrice,
+            totalPrice: totalValue,
+            deliveryDate: deliveryDate.toISOString().slice(0, 10),
+            paymentTerms,
+            minimumOrderQuantity: auction.totalQuantity,
+            submittedAt: submittedAt.toISOString(),
+            status: "active",
+        });
+        setBidStep("submitted");
+    };
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -100,7 +122,7 @@ export default function SupplierBidPageClient({ params }: { params: Promise<{ id
                     { icon: Package, label: "Total Qty", value: `${auction.totalQuantity.toLocaleString()} units` },
                     { icon: Users, label: "Shops", value: auction.participatingShops.toString() },
                     { icon: DollarSign, label: "Reserve", value: `$${auction.reservePrice}/unit` },
-                    { icon: Gavel, label: "Bids", value: auction.bids.length.toString() },
+                    { icon: Gavel, label: "Bids", value: auctionBids.length.toString() },
                     { icon: Clock, label: "Est. Value", value: formatCurrency(auction.estimatedValue) },
                 ].map((item, i) => (
                     <motion.div key={item.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
@@ -174,7 +196,7 @@ export default function SupplierBidPageClient({ params }: { params: Promise<{ id
                                         <h2 className="text-sm font-bold text-[#1A1A1A]">
                                             {auction.auctionType === "sealed" ? "Sealed Bids" : "Current Bids"}
                                         </h2>
-                                        <span className="text-[10px] px-2 py-0.5 bg-[#F7F7F5] text-[#6B7265] rounded-full font-medium">{auction.bids.length} total</span>
+                                        <span className="text-[10px] px-2 py-0.5 bg-[#F7F7F5] text-[#6B7265] rounded-full font-medium">{auctionBids.length} total</span>
                                     </div>
                                     {auction.auctionType === "sealed" ? (
                                         <div className="px-5 py-10 text-center">
@@ -183,7 +205,7 @@ export default function SupplierBidPageClient({ params }: { params: Promise<{ id
                                             </div>
                                             <p className="text-sm font-medium text-[#6B7265]">Sealed-bid auction</p>
                                             <p className="text-xs text-[#9CA38C] mt-1">Bid prices are hidden until the auction closes</p>
-                                            <p className="text-sm font-bold text-[#1A1A1A] mt-3">{auction.bids.length} bids submitted so far</p>
+                                            <p className="text-sm font-bold text-[#1A1A1A] mt-3">{auctionBids.length} bids submitted so far</p>
                                         </div>
                                     ) : (
                                         <div className="overflow-x-auto">
@@ -245,7 +267,7 @@ export default function SupplierBidPageClient({ params }: { params: Promise<{ id
                                     reservePrice={auction.reservePrice}
                                     lowestBid={lowestBid}
                                     avgBid={avgBid}
-                                    bidsCount={auction.bids.length}
+                                    bidsCount={auctionBids.length}
                                     quantity={auction.totalQuantity}
                                 />
 
@@ -380,7 +402,7 @@ export default function SupplierBidPageClient({ params }: { params: Promise<{ id
 
                                     <div className="flex gap-3 pt-2">
                                         <button onClick={() => setBidStep("configure")} className="flex-1 px-4 py-3 border border-[#E5E5E0] text-sm font-medium text-[#6B7265] rounded-xl hover:bg-[#F7F7F5]">Back</button>
-                                        <button onClick={() => setBidStep("submitted")}
+                                        <button onClick={handleSubmitBid}
                                             className="flex-1 px-4 py-3 bg-gradient-to-r from-[#2C432D] to-[#4A6741] text-white text-sm font-bold rounded-xl hover:from-[#1A2E1B] hover:to-[#3D5A35] shadow-lg shadow-[#2C432D]/20 flex items-center justify-center gap-2">
                                             <Send size={14} /> Submit Bid
                                         </button>
