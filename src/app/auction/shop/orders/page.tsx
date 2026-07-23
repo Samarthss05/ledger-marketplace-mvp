@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { Search, Clock, CheckCircle2, Truck, Package, RefreshCcw, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+import { Clock, CheckCircle2, Truck, Package, RefreshCcw, ArrowRight, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import StatusBadge from "../../components/status-badge";
 import { orders, formatCurrency } from "../../lib/mock-data";
+import { useOrderWorkflowStore } from "../../lib/order-workflow-store";
 
 type StatusFilter = "all" | "pending" | "confirmed" | "shipped" | "delivered";
 
@@ -13,7 +15,15 @@ const statusSteps = ["pending", "confirmed", "shipped", "delivered"];
 export default function ShopOrders() {
     const [filter, setFilter] = useState<StatusFilter>("all");
     const [expandedOrd, setExpandedOrd] = useState<string | null>(null);
-    const myOrders = orders.filter((o) => o.shopName === "RK Minimart");
+    const { createdOrders } = useOrderWorkflowStore();
+    const myOrders = [
+        ...createdOrders,
+        ...orders.filter(
+            (order) =>
+                order.shopName === "RK Minimart" &&
+                !createdOrders.some((created) => created.id === order.id)
+        ),
+    ];
     const filtered = filter === "all" ? myOrders : myOrders.filter((o) => o.status === filter);
 
     const stepIcons: Record<string, React.ReactNode> = {
@@ -25,9 +35,15 @@ export default function ShopOrders() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <h1 className="text-xl font-bold text-[#1A1A1A]">My Orders</h1>
-                <p className="text-sm text-[#6B7265] mt-0.5">Track deliveries and reorder from previous auctions</p>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p className="text-[10px] font-bold tracking-[0.16em] text-[#6F9277] uppercase">Fulfillment</p>
+                    <h1 className="text-2xl font-bold text-[#1A1A1A]">Orders</h1>
+                    <p className="text-sm text-[#6B7265] mt-0.5">Track confirmed supplier awards through delivery.</p>
+                </div>
+                <Link href="/auction/shop/orders/new" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4F6F56] px-4 py-2.5 text-sm font-semibold text-white">
+                    <Plus size={14} /> Create order
+                </Link>
             </motion.div>
 
             {/* Pipeline */}
@@ -87,9 +103,9 @@ export default function ShopOrders() {
                                         <p className="text-[10px] text-[#9CA38C]">${order.unitPrice}/unit</p>
                                     </div>
                                     {order.status === "delivered" && (
-                                        <button className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#4A6741] border border-[#4A6741]/30 rounded-lg hover:bg-[#E8F5E9] transition-colors">
+                                        <Link href="/auction/shop/orders/new" className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#4A6741] border border-[#4A6741]/30 rounded-lg hover:bg-[#E8F5E9] transition-colors">
                                             <RefreshCcw size={10} /> Reorder
-                                        </button>
+                                        </Link>
                                     )}
                                 </div>
                             </div>
@@ -125,8 +141,6 @@ export default function ShopOrders() {
                                         <div className="relative border-l border-[#E5E5E0] space-y-4">
                                             {statusSteps.map((step, si) => {
                                                 const isCompleted = si <= currentStep;
-                                                const isCurrent = si === currentStep;
-
                                                 // Generate mock dates for the timeline based on the order's delivery date
                                                 const deliveryDate = new Date(order.deliveryDate);
                                                 const stepDate = new Date(deliveryDate);

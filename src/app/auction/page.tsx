@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Store, Truck, ArrowRight, Sparkles, TrendingDown, Shield, BarChart3 } from "lucide-react";
+import { Store, Truck, ArrowRight, Sparkles, Bot, Shield, FileText } from "lucide-react";
 import Link from "next/link";
 import { BrandLockup } from "@/components/brand-lockup";
 
@@ -50,8 +50,8 @@ export default function AuctionLanding() {
                     transition={{ duration: 0.6, delay: 0.2 }}
                     className="mb-12 max-w-2xl text-center text-base leading-7 text-[#666B66]"
                 >
-                    ReStock connects independent retailers and trusted suppliers to plan demand,
-                    compare bids, place orders, and manage fulfillment with confidence.
+                    ReStock connects independent retailers and trusted suppliers to create smarter
+                    orders, compare quotes, and manage fulfillment with confidence.
                 </motion.p>
 
                 {/* Role Cards */}
@@ -75,16 +75,16 @@ export default function AuctionLanding() {
                                     <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#6F9277] uppercase">Retailer workspace</p>
                                     <h2 className="mb-2 text-xl font-bold text-[#2F312F]">Buy for my shop</h2>
                                     <p className="mb-6 text-sm leading-relaxed text-[#666B66]">
-                                        Plan what you need, pool demand, compare supplier bids, and
-                                        keep every order moving in one place.
+                                        Build one clear order, improve it with AI, compare supplier
+                                        quotes, and keep fulfillment moving in one place.
                                     </p>
 
                                     {/* Value props */}
                                     <div className="space-y-2.5 mb-6">
                                         {[
-                                            { icon: TrendingDown, text: "Compare market-ready supplier bids" },
+                                            { icon: Bot, text: "AI-assisted order and price review" },
                                             { icon: Shield, text: "Buy from verified suppliers" },
-                                            { icon: Sparkles, text: "Plan demand and reorder faster" },
+                                            { icon: Sparkles, text: "Create and reorder faster" },
                                         ].map((item) => (
                                             <div key={item.text} className="flex items-center gap-2.5">
                                                 <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md bg-[#EDF3EC]">
@@ -122,14 +122,14 @@ export default function AuctionLanding() {
                                     <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#6F9277] uppercase">Supplier workspace</p>
                                     <h2 className="mb-2 text-xl font-bold text-[#2F312F]">Sell as a supplier</h2>
                                     <p className="mb-6 text-sm leading-relaxed text-[#666B66]">
-                                        See qualified demand, submit competitive bids, and manage
-                                        orders from award through delivery.
+                                        Receive qualified order requests, submit complete quotes,
+                                        and manage awards through delivery.
                                     </p>
 
                                     {/* Value props */}
                                     <div className="space-y-2.5 mb-6">
                                         {[
-                                            { icon: BarChart3, text: "Access qualified aggregated demand" },
+                                            { icon: FileText, text: "Respond to qualified retailer RFQs" },
                                             { icon: Shield, text: "Transact through a trusted workflow" },
                                             { icon: Sparkles, text: "Forecast volume and act earlier" },
                                         ].map((item) => (

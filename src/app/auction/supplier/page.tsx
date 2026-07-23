@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import StatusBadge from "../components/status-badge";
 import { mergeAuctionBids, useSupplierBidStore } from "../lib/bid-store";
+import { useOrderWorkflowStore } from "../lib/order-workflow-store";
 import {
     auctions,
     formatCurrency,
@@ -19,30 +20,10 @@ import {
     suppliers,
 } from "../lib/mock-data";
 
-const directRfqs = [
-    {
-        id: "RFQ-1042",
-        product: "Sprite 1.5L Carton",
-        quantity: "50 cartons",
-        deadline: "2 hours",
-    },
-    {
-        id: "RFQ-1043",
-        product: "Milo Refill Pack 2KG",
-        quantity: "100 packs",
-        deadline: "5 hours",
-    },
-    {
-        id: "RFQ-1044",
-        product: "Indomie Mi Goreng Carton",
-        quantity: "200 cartons",
-        deadline: "10 hours",
-    },
-];
-
 export default function SupplierDashboard() {
     const me = suppliers.find((supplier) => supplier.id === "SUP-001")!;
     const { bids: storedBids } = useSupplierBidStore();
+    const { requests, createdOrders } = useOrderWorkflowStore();
     const auctionsWithBids = auctions.map((auction) => ({
         ...auction,
         bids: mergeAuctionBids(auction, storedBids),
@@ -58,7 +39,20 @@ export default function SupplierDashboard() {
             auction.status === "active" &&
             !auction.bids.some((bid) => bid.supplierId === me.id)
     );
-    const myOrders = orders.filter((order) => order.supplierName === me.companyName);
+    const incomingRequests = requests.filter(
+        (request) =>
+            request.selectedSupplierIds.includes(me.id) &&
+            request.status !== "awarded" &&
+            !request.quotes.some((quote) => quote.supplierId === me.id)
+    );
+    const myOrders = [
+        ...createdOrders.filter((order) => order.supplierName === me.companyName),
+        ...orders.filter(
+            (order) =>
+                order.supplierName === me.companyName &&
+                !createdOrders.some((created) => created.id === order.id)
+        ),
+    ];
 
     const stats = [
         {
@@ -76,7 +70,7 @@ export default function SupplierDashboard() {
         {
             icon: FileText,
             label: "Incoming RFQs",
-            value: directRfqs.length.toString(),
+            value: incomingRequests.length.toString(),
             note: "need a response",
         },
         {
@@ -223,23 +217,31 @@ export default function SupplierDashboard() {
                         </Link>
                     </div>
                     <div className="space-y-3">
-                        {directRfqs.map((rfq) => (
+                        {incomingRequests.slice(0, 3).map((request) => (
                             <Link
-                                key={rfq.id}
+                                key={request.id}
                                 href="/auction/supplier/crm"
                                 className="block rounded-2xl border border-[#EDF3EC] p-4 transition-colors hover:bg-[#F8FAF6]"
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
-                                        <p className="text-sm font-semibold text-[#2F312F]">{rfq.product}</p>
-                                        <p className="mt-1 text-xs text-[#8A918A]">{rfq.quantity}</p>
+                                        <p className="text-sm font-semibold text-[#2F312F]">{request.title}</p>
+                                        <p className="mt-1 text-xs text-[#8A918A]">
+                                            {request.lines.length} product{request.lines.length === 1 ? "" : "s"} · {request.lines.reduce((total, line) => total + line.quantity, 0)} units
+                                        </p>
                                     </div>
                                     <span className="rounded-full bg-[#FFF3E0] px-2 py-1 text-[10px] font-semibold text-[#B35B12]">
-                                        {rfq.deadline}
+                                        {request.priority === "urgent" ? "Urgent" : "Open"}
                                     </span>
                                 </div>
                             </Link>
                         ))}
+                        {incomingRequests.length === 0 && (
+                            <div className="rounded-2xl border border-dashed border-[#DDE5DC] p-6 text-center">
+                                <p className="text-sm font-semibold text-[#2F312F]">All caught up</p>
+                                <p className="mt-1 text-xs text-[#8A918A]">No quote requests need a response.</p>
+                            </div>
+                        )}
                     </div>
                 </section>
             </div>

@@ -5,16 +5,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLockup } from "@/components/brand-lockup";
 import {
-    Store, ShoppingBag, ClipboardList, Bell, LogOut,
-    ShoppingCart, Layers, Package, Menu, X, CheckCircle2
+    Store, ClipboardList, Bell, LogOut,
+    FileText, Package, Menu, X, CheckCircle2, PlusCircle
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 const shopNav = [
     { label: "Dashboard", href: "/auction/shop", icon: Store },
-    { label: "Marketplace", href: "/auction/shop/marketplace", icon: ShoppingBag },
-    { label: "Demand", href: "/auction/shop/demand", icon: Layers },
-    { label: "Smart Cart", href: "/auction/shop/cart", icon: ShoppingCart },
+    { label: "Create Order", href: "/auction/shop/orders/new", icon: PlusCircle },
+    { label: "Requests", href: "/auction/shop/requests", icon: FileText },
     { label: "Orders", href: "/auction/shop/orders", icon: ClipboardList },
 ];
 
@@ -24,14 +23,20 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
     const [notificationsOpen, setNotificationsOpen] = useState(false);
 
     const notifications = [
-        { id: "n1", title: "Auction Won!", desc: "You won the auction for Nestle Milo 400G at $3.80/unit.", time: "10m ago", read: false, type: "success" },
-        { id: "n2", title: "Price Alert: Basmati Rice", desc: "Prices for India Gate Basmati Rice have dropped by 8%.", time: "2h ago", read: false, type: "alert" },
+        { id: "n1", title: "Quotes ready", desc: "Three supplier quotes are ready for your August replenishment order.", time: "10m ago", read: false, type: "success" },
+        { id: "n2", title: "AI price insight", desc: "Your rice target could be reduced by 8% without limiting supplier coverage.", time: "2h ago", read: false, type: "alert" },
         { id: "n3", title: "Order Shipped", desc: "Order #ORD-2918 from Metro Foods is on its way.", time: "5h ago", read: true, type: "info" },
-        { id: "n4", title: "New Group Buy", desc: "3 shops near you are organizing a group buy for Cooking Oil.", time: "1d ago", read: true, type: "info" },
+        { id: "n4", title: "Supplier responded", desc: "Pacific Foods submitted an offer for RFQ-4901.", time: "1d ago", read: true, type: "info" },
     ];
 
     const isActive = (href: string) => {
         if (href === "/auction/shop") return pathname === "/auction/shop";
+        if (href === "/auction/shop/orders/new") {
+            return pathname === "/auction/shop/orders/new";
+        }
+        if (href === "/auction/shop/orders") {
+            return pathname === "/auction/shop/orders";
+        }
         return pathname.startsWith(href);
     };
 

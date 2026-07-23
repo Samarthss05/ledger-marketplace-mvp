@@ -5,7 +5,7 @@ const footerLinks = {
     Platform: [
         { label: "Retailer workspace", href: "/auction/shop" },
         { label: "Supplier workspace", href: "/auction/supplier" },
-        { label: "Demand marketplace", href: "/auction" },
+        { label: "Procurement platform", href: "/auction" },
         { label: "Order fulfillment", href: "/auction/supplier/operations" },
     ],
     Company: [

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Gavel, Users, Package, ArrowRight, Clock } from "lucide-react";
+import { Search, Gavel, Users, Package, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import StatusBadge from "../../components/status-badge";
 import { auctions, formatCurrency } from "../../lib/mock-data";
