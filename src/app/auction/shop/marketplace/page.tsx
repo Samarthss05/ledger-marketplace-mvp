@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    Search, Clock, Users, Gavel, ArrowRight, ShoppingBag, TrendingDown,
-    CheckCircle2, X, Star, Eye, LayoutGrid, List, SlidersHorizontal, Share2, Package, Sparkles, Truck, ShieldCheck
+    Search, Clock, Users, Gavel, ShoppingBag, TrendingDown,
+    CheckCircle2, X, Star, Eye, LayoutGrid, List, SlidersHorizontal, Share2, Package, Truck, ShieldCheck
 } from "lucide-react";
 import StatusBadge from "../../components/status-badge";
 import { auctions, formatCurrency, type Auction } from "../../lib/mock-data";
@@ -67,7 +67,12 @@ export default function ShopMarketplace() {
         setJoinedAuctions((prev) => new Set([...prev, auctionId]));
         setSelectedAuction(null);
     };
-    const toggleFav = (id: string) => setFavorites(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    const toggleFav = (id: string) => setFavorites(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+    });
     const toggleCompare = (id: string) => {
         setCompareList(prev => prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 3 ? [...prev, id] : prev);
     };
@@ -288,7 +293,6 @@ export default function ShopMarketplace() {
                 })}
                 {procurementMode === "direct" && filteredProducts.map((product, i) => {
                     const isFav = favorites.has(product.id);
-                    const supplier = ["Metro Foods", "RK Wholesale", "Pacific Distributors", "Golden Supply Co"][i % 4];
                     const isVerified = i % 2 === 0;
                     const tag = i % 5 === 0 ? "🔥 Bestseller" : i % 3 === 0 ? "💰 Bulk Discount" : null;
                     const delivery = ["Tomorrow", "2 Days", "3 Days"][i % 3];
@@ -390,7 +394,7 @@ export default function ShopMarketplace() {
                         <Search size={24} className="text-[#9CA38C]" />
                     </div>
                     <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">No active auctions found</h3>
-                    <p className="text-sm text-[#6B7265] mb-8 max-w-md mx-auto">There are currently no live auctions matching your exact criteria. Don't worry, you have other options.</p>
+                    <p className="text-sm text-[#6B7265] mb-8 max-w-md mx-auto">There are currently no live auctions matching your exact criteria. Don&apos;t worry, you have other options.</p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <button onClick={() => setShowRfqModal(true)} className="flex items-center gap-2 px-6 py-3 bg-[#4A6741] text-white text-sm font-bold rounded-xl hover:bg-[#3D5A35] transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5">
@@ -401,26 +405,6 @@ export default function ShopMarketplace() {
                         </button>
                     </div>
 
-                    {/* AI Substitutes */}
-                    {searchQuery && (
-                        <div className="mt-12 text-left border-t border-[#F0F0EC] p-6">
-                            <h4 className="text-sm font-bold text-[#1A1A1A] flex items-center gap-2 mb-4">
-                                <Sparkles size={14} className="text-[#B8860B]" /> AI Suggested Alternatives
-                            </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {products.filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3).map((sub, i) => (
-                                    <div key={i} className="p-4 bg-[#F7F7F5] rounded-xl border border-[#E5E5E0]/50 hover:border-[#4A6741]/30 transition-colors">
-                                        <p className="text-xs font-bold text-[#1A1A1A] mb-1">{sub.name}</p>
-                                        <p className="text-[10px] text-[#9CA38C] mb-2">Based on your search</p>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-bold text-[#2C432D]">{formatCurrency(sub.price)}</span>
-                                            <button className="text-[10px] font-bold text-[#4A6741] uppercase tracking-wide">View Options</button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
 

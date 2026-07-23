@@ -6,7 +6,7 @@ const footerLinks = {
         { label: "Retailer workspace", href: "/auction/shop" },
         { label: "Supplier workspace", href: "/auction/supplier" },
         { label: "Demand marketplace", href: "/auction" },
-        { label: "Ledger finance", href: "#finance" },
+        { label: "Order fulfillment", href: "/auction/supplier/operations" },
     ],
     Company: [
         { label: "About", href: "#" },

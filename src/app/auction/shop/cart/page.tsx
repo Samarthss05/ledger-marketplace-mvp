@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    ShoppingCart, Plus, Trash2, Sparkles, ArrowRight, Package, AlertCircle,
-    CheckCircle2, RefreshCcw, Zap, Brain, ChevronDown,
+    ShoppingCart, Plus, Trash2, ArrowRight, Package, AlertCircle,
+    CheckCircle2, RefreshCcw,
 } from "lucide-react";
 import StatusBadge from "../../components/status-badge";
-import { auctions, formatCurrency } from "../../lib/mock-data";
+import { formatCurrency } from "../../lib/mock-data";
 import { products } from "../../lib/products-db";
 
 interface CartItem {
@@ -30,9 +30,6 @@ const p5 = products.find(p => p.name.includes("Pringles") && p.name.includes("14
 const p6 = products.find(p => p.name.includes("Downy Expert")) || products[6];
 const p7 = products.find(p => p.name.includes("Darlie") && p.name.includes("260G")) || products[7];
 const p8 = products.find(p => p.name.includes("Egg 12 Pcs")) || products[4];
-const p9 = products.find(p => p.name.includes("Lipton") && p.name.includes("25 Tea Bags")) || products[8];
-const p10 = products.find(p => p.name.includes("Head & Shoulder") && p.name.includes("170ML")) || products[9];
-
 const initialCart: CartItem[] = [
     { id: "c1", productName: p1.name, category: p1.category, quantity: 200, maxPrice: p1.price, matched: true, matchedAuctionId: "AUC-001", matchedPrice: p1.cost + 0.2, savings: p1.price - (p1.cost + 0.2) },
     { id: "c2", productName: p2.name, category: p2.category, quantity: 100, maxPrice: p2.price, matched: true, matchedAuctionId: "AUC-002", matchedPrice: p2.cost + 0.02, savings: p2.price - (p2.cost + 0.02) },
@@ -42,12 +39,6 @@ const initialCart: CartItem[] = [
     { id: "c6", productName: p6.name, category: p6.category, quantity: 40, maxPrice: p6.price, matched: false },
     { id: "c7", productName: p7.name, category: p7.category, quantity: 60, maxPrice: p7.price, matched: false },
     { id: "c8", productName: p8.name, category: p8.category, quantity: 150, maxPrice: p8.price, matched: true, matchedAuctionId: "AUC-006", matchedPrice: p8.cost + 0.03, savings: p8.price - (p8.cost + 0.03) },
-];
-
-const bundleSuggestions = [
-    { id: "b1", items: [p4.name, p3.name], savings: "5% extra", reason: "Frequently bought together — cooking essentials" },
-    { id: "b2", items: [p1.name, p9.name], savings: "3% extra", reason: "Same supplier can deliver both beverages" },
-    { id: "b3", items: [p7.name, p10.name], savings: "4% extra", reason: "Personal care combo — one delivery slot" },
 ];
 
 export default function SmartCart() {
@@ -70,11 +61,8 @@ export default function SmartCart() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-xl font-bold text-[#1A1A1A]">Smart Shopping Cart</h1>
-                        <span className="px-2 py-0.5 bg-[#F3E5F5] text-[#7B1FA2] text-[9px] font-bold rounded-full flex items-center gap-1"><Brain size={8} /> AI-POWERED</span>
-                    </div>
-                    <p className="text-sm text-[#6B7265] mt-0.5">Build your weekly procurement list — we auto-match you to the best auctions</p>
+                    <h1 className="text-xl font-bold text-[#1A1A1A]">Procurement List</h1>
+                    <p className="text-sm text-[#6B7265] mt-0.5">Build your weekly order and match items to available auctions.</p>
                 </div>
                 <div className="flex gap-2">
                     <button onClick={() => setShowAdd(true)}
@@ -108,10 +96,10 @@ export default function SmartCart() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
                 className="flex items-center justify-between bg-white rounded-2xl border border-[#E5E5E0] p-4">
                 <div className="flex items-center gap-3">
-                    <Sparkles size={16} className="text-[#7B1FA2]" />
+                    <RefreshCcw size={16} className="text-[#4A6741]" />
                     <div>
-                        <p className="text-sm font-bold text-[#1A1A1A]">Auto-Match to Best Auctions</p>
-                        <p className="text-[10px] text-[#9CA38C]">AI automatically finds the best price for each item in your cart</p>
+                        <p className="text-sm font-bold text-[#1A1A1A]">Match to available auctions</p>
+                        <p className="text-[10px] text-[#9CA38C]">ReStock checks your list against current supplier demand blocks.</p>
                     </div>
                 </div>
                 <button onClick={() => setAutoMatch(!autoMatch)}
@@ -191,30 +179,6 @@ export default function SmartCart() {
                     </div>
                 </div>
             )}
-
-            {/* Bundle Suggestions */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-                className="bg-gradient-to-r from-[#F3E5F5] to-[#E8F5E9] rounded-2xl p-5 border border-[#7B1FA2]/10">
-                <div className="flex items-center gap-2 mb-3">
-                    <Sparkles size={14} className="text-[#7B1FA2]" />
-                    <h2 className="text-sm font-bold text-[#1A1A1A]">Bundle Deal Suggestions</h2>
-                    <span className="text-[9px] px-1.5 py-0.5 bg-[#7B1FA2] text-white rounded font-bold">AI</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {bundleSuggestions.map((b) => (
-                        <div key={b.id} className="bg-white/70 backdrop-blur-sm rounded-xl p-4">
-                            <div className="flex items-center gap-2 mb-1.5">
-                                <span className="text-xs font-bold text-[#1A1A1A]">{b.items.join(" + ")}</span>
-                                <span className="text-[9px] px-1.5 py-0.5 bg-[#E8F5E9] text-[#2E7D32] rounded-full font-bold">{b.savings}</span>
-                            </div>
-                            <p className="text-[10px] text-[#6B7265]">{b.reason}</p>
-                            <button className="mt-2 text-xs font-semibold text-[#4A6741] flex items-center gap-1">
-                                Add Bundle <ArrowRight size={10} />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            </motion.div>
 
             {/* Checkout */}
             {matched.length > 0 && (

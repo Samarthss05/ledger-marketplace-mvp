@@ -6,20 +6,16 @@ import { usePathname } from "next/navigation";
 import { BrandLockup } from "@/components/brand-lockup";
 import {
     Store, ShoppingBag, ClipboardList, Bell, LogOut,
-    ShoppingCart, Brain, Package, Users, BarChart3, Wallet, ChevronDown, Menu, X, CheckCircle2
+    ShoppingCart, Layers, Package, Menu, X, CheckCircle2
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 const shopNav = [
     { label: "Dashboard", href: "/auction/shop", icon: Store },
     { label: "Marketplace", href: "/auction/shop/marketplace", icon: ShoppingBag },
+    { label: "Demand", href: "/auction/shop/demand", icon: Layers },
     { label: "Smart Cart", href: "/auction/shop/cart", icon: ShoppingCart },
-    { label: "AI Planner", href: "/auction/shop/planner", icon: Brain },
-    { label: "Inventory", href: "/auction/shop/inventory", icon: Package },
-    { label: "Community", href: "/auction/shop/community", icon: Users },
     { label: "Orders", href: "/auction/shop/orders", icon: ClipboardList },
-    { label: "Analytics", href: "/auction/shop/analytics", icon: BarChart3 },
-    { label: "Finance", href: "/auction/shop/finance", icon: Wallet },
 ];
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
@@ -39,9 +35,6 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
         return pathname.startsWith(href);
     };
 
-    const primaryNav = shopNav.slice(0, 4);
-    const secondaryNav = shopNav.slice(4);
-
     return (
         <div className="min-h-screen bg-[#FAFBF8]">
             <header className="sticky top-0 z-50 border-b border-[#DDE5DC] bg-white/92 backdrop-blur-xl">
@@ -58,7 +51,7 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
                         </div>
 
                         <nav className="hidden lg:flex items-center gap-0.5">
-                            {primaryNav.map((item) => (
+                            {shopNav.map((item) => (
                                 <Link key={item.href} href={item.href}>
                                     <div className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${isActive(item.href) ? "bg-[#4F6F56] text-white shadow-sm" : "text-[#666B66] hover:text-[#2F312F] hover:bg-[#F4F7F3]"}`}>
                                         <item.icon size={14} />
@@ -66,21 +59,6 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
                                     </div>
                                 </Link>
                             ))}
-                            <div className="relative group">
-                                <button className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium text-[#666B66] hover:text-[#2F312F] hover:bg-[#F4F7F3] transition-all">
-                                    More <ChevronDown size={12} />
-                                </button>
-                                <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-xl border border-[#E5E5E0] shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-1.5">
-                                    {secondaryNav.map((item) => (
-                                        <Link key={item.href} href={item.href}>
-                                            <div className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors ${isActive(item.href) ? "bg-[#EDF3EC] text-[#4F6F56]" : "text-[#666B66] hover:bg-[#F4F7F3]"}`}>
-                                                <item.icon size={14} />
-                                                <span>{item.label}</span>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </div>
                         </nav>
 
                         <div className="flex items-center gap-2">

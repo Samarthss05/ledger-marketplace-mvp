@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-    Package, Truck, MapPin, CheckCircle2, Clock, ArrowRight, AlertTriangle,
-    Navigation, BarChart3, Calendar, Eye, Camera, FileText, Zap,
+    Package, Truck, MapPin, CheckCircle2, Clock, ArrowRight,
+    Navigation, Calendar, Camera, Zap,
 } from "lucide-react";
-import { formatCurrency } from "../../lib/mock-data";
 import { products } from "../../lib/products-db";
 
 const fulfillmentPipeline = [
@@ -168,12 +167,12 @@ export default function OperationsPage() {
                     <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-[#E3F2FD] to-[#E8F5E9] rounded-2xl border border-[#1565C0]/10">
                         <Zap size={14} className="text-[#1565C0] mt-0.5 flex-shrink-0" />
                         <div>
-                            <p className="text-xs font-bold text-[#1A1A1A]">AI-Optimized Route: 5 shops, 5.8km, ~35 minutes</p>
-                            <p className="text-[10px] text-[#6B7265] mt-0.5">This route saves 12km and 40 minutes compared to the default delivery order.</p>
+                            <p className="text-xs font-bold text-[#1A1A1A]">Suggested delivery route: 5 shops, 5.8km, ~35 minutes</p>
+                            <p className="text-[10px] text-[#6B7265] mt-0.5">This stop order reduces the total driving distance for today&apos;s deliveries.</p>
                         </div>
                     </div>
                     <div className="bg-white rounded-2xl border border-[#E5E5E0] p-5">
-                        <h2 className="text-sm font-bold text-[#1A1A1A] mb-4">Optimized Stop Order</h2>
+                        <h2 className="text-sm font-bold text-[#1A1A1A] mb-4">Delivery stop order</h2>
                         <div className="space-y-0">
                             {routeStops.map((stop, i) => (
                                 <div key={stop.shop} className="flex items-center gap-4">
@@ -223,7 +222,7 @@ export default function OperationsPage() {
                         })}
                     </div>
                     <div className="bg-white rounded-2xl border border-[#E5E5E0] p-5">
-                        <h3 className="text-sm font-bold text-[#1A1A1A] mb-2">Capacity Recommendation</h3>
+                        <h3 className="text-sm font-bold text-[#1A1A1A] mb-2">Available capacity</h3>
                         <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-[#F3E5F5] to-[#E8F5E9] rounded-xl">
                             <Zap size={14} className="text-[#7B1FA2] mt-0.5 flex-shrink-0" />
                             <div>
