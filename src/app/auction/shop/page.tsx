@@ -8,9 +8,7 @@ import {
     CircleDollarSign,
     FileText,
     LoaderCircle,
-    Package,
     Plus,
-    ShieldCheck,
     Sparkles,
     Truck,
 } from "lucide-react";
@@ -122,22 +120,12 @@ export default function ShopDashboard() {
                     </section>
                 </div>
             )}
-
-            <section className="grid gap-4 sm:grid-cols-3">
-                <Trust icon={ShieldCheck} title="Your business details stay private" body="Suppliers see only your ReStock ID—not your shop name or contact details." />
-                <Trust icon={Truck} title="Delivery tracking with Ninja Van" body="Follow pickup and delivery updates from dispatch to your door." />
-                <Trust icon={Package} title="Confirm before payment" body="Supplier payment is released only after you confirm the order arrived correctly." />
-            </section>
         </div>
     );
 }
 
 function Metric({ icon: Icon, label, value, detail }: { icon: typeof FileText; label: string; value: string; detail: string }) {
     return <div className="rounded-2xl border border-[#DDE5DC] bg-white p-4"><Icon size={15} className="text-[#6F9277]" /><p className="mt-3 text-xl font-bold text-[#2F312F]">{value}</p><p className="mt-0.5 text-xs font-semibold text-[#414641]">{label}</p><p className="mt-1 text-[9px] text-[#8A918A]">{detail}</p></div>;
-}
-
-function Trust({ icon: Icon, title, body }: { icon: typeof ShieldCheck; title: string; body: string }) {
-    return <div className="flex items-start gap-3 rounded-2xl border border-[#DDE5DC] bg-white p-4"><div className="rounded-xl bg-[#EDF3EC] p-2 text-[#4F6F56]"><Icon size={15} /></div><div><p className="text-xs font-bold text-[#2F312F]">{title}</p><p className="mt-1 text-[10px] leading-5 text-[#7B817B]">{body}</p></div></div>;
 }
 
 function Empty({ text }: { text: string }) {
