@@ -34,6 +34,7 @@ import {
 } from "../../lib/display-copy";
 
 type Outcome = "accepted" | "damaged" | "short" | "wrong_items" | "other";
+type OrderFilter = "all" | "active" | "confirm" | "pending";
 
 function money(value: number) {
     return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" }).format(value);
@@ -50,6 +51,42 @@ export default function OrdersPage() {
     const [photoError, setPhotoError] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [filter, setFilter] = useState<OrderFilter>("all");
+    const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
+
+    const filteredOrders = orders.filter((order) => {
+        if (filter === "active") {
+            return ["awaiting_courier_pickup", "in_transit"].includes(order.verificationStatus);
+        }
+        if (filter === "confirm") {
+            return order.verificationStatus === "awaiting_shop_verification";
+        }
+        if (filter === "pending") return ["held", "under_review"].includes(order.payoutStatus);
+        return true;
+    });
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const requestedFilter = params.get("filter");
+        const requestedOrder = params.get("order");
+        const validFilters: OrderFilter[] = ["all", "active", "confirm", "pending"];
+
+        if (requestedFilter && validFilters.includes(requestedFilter as OrderFilter)) {
+            setFilter(requestedFilter as OrderFilter);
+        }
+        if (requestedOrder) setFocusedOrderId(requestedOrder);
+    }, []);
+
+    useEffect(() => {
+        if (!loading && focusedOrderId) {
+            window.requestAnimationFrame(() => {
+                document.getElementById(`order-${focusedOrderId}`)?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                });
+            });
+        }
+    }, [focusedOrderId, loading]);
 
     useEffect(
         () => () => {
@@ -102,6 +139,16 @@ export default function OrdersPage() {
         }
     };
 
+    const selectFilter = (value: OrderFilter) => {
+        setFilter(value);
+        setFocusedOrderId(null);
+        const url = new URL(window.location.href);
+        if (value === "all") url.searchParams.delete("filter");
+        else url.searchParams.set("filter", value);
+        url.searchParams.delete("order");
+        window.history.replaceState({}, "", url);
+    };
+
     return (
         <div className="mx-auto max-w-7xl space-y-6 px-4 py-7 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -125,18 +172,18 @@ export default function OrdersPage() {
             {error ? <p role="alert" className="rounded-xl bg-[#FFF2EF] px-4 py-3 text-xs text-[#A33A2B]">{error}</p> : null}
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <Metric label="Total orders" value={orders.length.toString()} />
-                <Metric label="In delivery" value={orders.filter((order) => ["awaiting_courier_pickup", "in_transit"].includes(order.verificationStatus)).length.toString()} />
-                <Metric label="Ready to confirm" value={orders.filter((order) => order.verificationStatus === "awaiting_shop_verification").length.toString()} />
-                <Metric label="Value awaiting confirmation" value={money(orders.filter((order) => order.payoutStatus !== "released").reduce((sum, order) => sum + order.totalPrice, 0))} />
+                <Metric label="Total orders" value={orders.length.toString()} active={filter === "all"} onClick={() => selectFilter("all")} />
+                <Metric label="In delivery" value={orders.filter((order) => ["awaiting_courier_pickup", "in_transit"].includes(order.verificationStatus)).length.toString()} active={filter === "active"} onClick={() => selectFilter("active")} />
+                <Metric label="Ready to confirm" value={orders.filter((order) => order.verificationStatus === "awaiting_shop_verification").length.toString()} active={filter === "confirm"} onClick={() => selectFilter("confirm")} />
+                <Metric label="Value awaiting confirmation" value={money(orders.filter((order) => ["held", "under_review"].includes(order.payoutStatus)).reduce((sum, order) => sum + order.totalPrice, 0))} active={filter === "pending"} onClick={() => selectFilter("pending")} />
             </div>
 
             {loading ? (
                 <div className="flex justify-center py-20 text-[#6F9277]"><LoaderCircle className="animate-spin" size={25} /></div>
             ) : (
                 <div className="space-y-4">
-                    {orders.map((order) => (
-                        <OrderCard key={order.id} order={order} onVerify={() => openVerification(order)} />
+                    {filteredOrders.map((order) => (
+                        <OrderCard key={order.id} order={order} focused={order.id === focusedOrderId} onVerify={() => openVerification(order)} />
                     ))}
                 </div>
             )}
@@ -149,6 +196,16 @@ export default function OrdersPage() {
                     <Link href="/auction/shop/requests" className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56]">
                         View quote requests <ArrowRight size={12} />
                     </Link>
+                </div>
+            ) : null}
+
+            {!loading && orders.length > 0 && filteredOrders.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-[#C9D4C6] bg-white py-12 text-center">
+                    <Package size={24} className="mx-auto text-[#A9B4A6]" />
+                    <p className="mt-3 text-sm font-semibold text-[#2F312F]">No orders in this view</p>
+                    <button type="button" onClick={() => selectFilter("all")} className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56] hover:underline">
+                        Show all orders <ArrowRight size={12} />
+                    </button>
                 </div>
             ) : null}
 
@@ -221,13 +278,35 @@ export default function OrdersPage() {
     );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-    return <div className="rounded-2xl border border-[#DDE5DC] bg-white p-4"><p className="text-xl font-bold text-[#2F312F]">{value}</p><p className="mt-1 text-[10px] font-semibold text-[#7B817B]">{label}</p></div>;
+function Metric({ label, value, active, onClick }: { label: string; value: string; active: boolean; onClick: () => void }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-pressed={active}
+            className={`group rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#AFC2B1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6F9277] ${
+                active ? "border-[#9DB29F] bg-[#F3F7F2]" : "border-[#DDE5DC] bg-white"
+            }`}
+        >
+            <div className="flex items-center justify-between">
+                <p className="text-xl font-bold text-[#2F312F]">{value}</p>
+                <ArrowRight size={13} className="text-[#B0BBB1] transition group-hover:translate-x-0.5 group-hover:text-[#4F6F56]" />
+            </div>
+            <p className="mt-1 text-[10px] font-semibold text-[#7B817B]">{label}</p>
+        </button>
+    );
 }
 
-function OrderCard({ order, onVerify }: { order: FulfillmentOrder; onVerify: () => void }) {
+function OrderCard({ order, focused, onVerify }: { order: FulfillmentOrder; focused: boolean; onVerify: () => void }) {
     return (
-        <article className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
+        <article
+            id={`order-${order.id}`}
+            className={`scroll-mt-24 rounded-3xl border bg-white p-5 transition ${
+                focused
+                    ? "border-[#8FA993] shadow-[0_18px_45px_-36px_rgba(54,88,69,0.6)]"
+                    : "border-[#DDE5DC]"
+            }`}
+        >
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
                     <div className="rounded-xl bg-[#EDF3EC] p-2.5 text-[#4F6F56]"><Package size={17} /></div>

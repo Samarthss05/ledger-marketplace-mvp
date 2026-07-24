@@ -23,13 +23,13 @@ function money(value: number) {
 export default function ShopDashboard() {
     const { organization } = useAuth();
     const { requests, createdOrders: orders, loading, error } = useOrderWorkflowStore();
-    const openRequests = requests.filter((request) => ["sent", "quoted"].includes(request.status));
+    const waitingRequests = requests.filter((request) => request.status === "sent");
     const needsDecision = requests.filter((request) => request.status === "quoted");
     const needsVerification = orders.filter(
         (order) => order.verificationStatus === "awaiting_shop_verification"
     );
     const protectedValue = orders
-        .filter((order) => order.payoutStatus !== "released")
+        .filter((order) => ["held", "under_review"].includes(order.payoutStatus))
         .reduce((sum, order) => sum + order.totalPrice, 0);
 
     return (
@@ -62,10 +62,10 @@ export default function ShopDashboard() {
             {error ? <p role="alert" className="rounded-xl bg-[#FFF2EF] px-4 py-3 text-xs text-[#A33A2B]">{error}</p> : null}
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <Metric icon={FileText} label="Requests awaiting quotes" value={openRequests.length.toString()} detail="Waiting for suppliers" />
-                <Metric icon={Sparkles} label="Quotes received" value={needsDecision.length.toString()} detail="Ready for you" />
-                <Metric icon={Camera} label="Deliveries to confirm" value={needsVerification.length.toString()} detail="Check what arrived" />
-                <Metric icon={CircleDollarSign} label="Order value pending" value={money(protectedValue)} detail="Until delivery is confirmed" />
+                <Metric href="/auction/shop/requests?status=sent" icon={FileText} label="Requests awaiting quotes" value={waitingRequests.length.toString()} detail="Waiting for suppliers" />
+                <Metric href="/auction/shop/requests?status=quoted" icon={Sparkles} label="Quotes received" value={needsDecision.length.toString()} detail="Ready for you" />
+                <Metric href="/auction/shop/orders?filter=confirm" icon={Camera} label="Deliveries to confirm" value={needsVerification.length.toString()} detail="Check what arrived" />
+                <Metric href="/auction/shop/orders?filter=pending" icon={CircleDollarSign} label="Order value pending" value={money(protectedValue)} detail="Until delivery is confirmed" />
             </div>
 
             {loading ? (
@@ -78,19 +78,27 @@ export default function ShopDashboard() {
                                 <h2 className="text-base font-bold text-[#2F312F]">Quote requests</h2>
                                 <p className="mt-1 text-[10px] text-[#8A918A]">Recent requests and supplier responses</p>
                             </div>
-                            <Link href="/auction/shop/requests" className="text-xs font-bold text-[#4F6F56]">View all</Link>
+                            <Link href="/auction/shop/requests" className="inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56] hover:underline">View all <ArrowRight size={11} /></Link>
                         </div>
                         <div className="mt-4 divide-y divide-[#EDF0EC]">
                             {requests.slice(0, 5).map((request) => (
-                                <div key={request.id} className="flex items-center justify-between gap-4 py-4">
+                                <Link
+                                    key={request.id}
+                                    href={`/auction/shop/requests?request=${request.id}`}
+                                    className="-mx-2 flex items-center justify-between gap-4 rounded-xl px-2 py-4 transition hover:bg-[#F7F9F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6F9277]"
+                                    aria-label={`Open ${request.title}`}
+                                >
                                     <div className="min-w-0">
                                         <p className="truncate text-xs font-bold text-[#2F312F]">{request.title}</p>
                                         <p className="mt-1 text-[10px] text-[#8A918A]">{request.reference} · {request.quotes.length} quotes</p>
                                     </div>
-                                    <span className="rounded-full bg-[#F1F5F0] px-2.5 py-1 text-[9px] font-bold text-[#5B705F]">{retailerRequestStatus(request.status)}</span>
-                                </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="rounded-full bg-[#F1F5F0] px-2.5 py-1 text-[9px] font-bold text-[#5B705F]">{retailerRequestStatus(request.status)}</span>
+                                        <ArrowRight size={13} className="text-[#91A195]" />
+                                    </div>
+                                </Link>
                             ))}
-                            {requests.length === 0 ? <Empty text="No quote requests yet." /> : null}
+                            {requests.length === 0 ? <Empty text="No quote requests yet." href="/auction/shop/orders/new" action="Create an order" /> : null}
                         </div>
                     </section>
 
@@ -100,22 +108,30 @@ export default function ShopDashboard() {
                                 <h2 className="text-base font-bold text-[#2F312F]">Deliveries</h2>
                                 <p className="mt-1 text-[10px] text-[#8A918A]">Latest Ninja Van updates</p>
                             </div>
-                            <Link href="/auction/shop/orders" className="text-xs font-bold text-[#4F6F56]">View all</Link>
+                            <Link href="/auction/shop/orders" className="inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56] hover:underline">View all <ArrowRight size={11} /></Link>
                         </div>
                         <div className="mt-4 space-y-3">
                             {orders.slice(0, 4).map((order) => (
-                                <div key={order.id} className="rounded-2xl bg-[#F7F9F5] p-4">
+                                <Link
+                                    key={order.id}
+                                    href={`/auction/shop/orders?order=${order.id}`}
+                                    className="block rounded-2xl bg-[#F7F9F5] p-4 transition hover:bg-[#EDF3EC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6F9277]"
+                                    aria-label={`Open delivery ${order.reference}`}
+                                >
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
                                             <p className="text-xs font-bold text-[#2F312F]">{order.productName}</p>
                                             <p className="mt-1 text-[10px] text-[#8A918A]">{order.reference} · {order.supplierAlias}</p>
                                         </div>
-                                        {order.verificationStatus === "verified" ? <CheckCircle2 size={15} className="text-[#4F6F56]" /> : <Truck size={15} className="text-[#6F9277]" />}
+                                        <div className="flex items-center gap-2">
+                                            {order.verificationStatus === "verified" ? <CheckCircle2 size={15} className="text-[#4F6F56]" /> : <Truck size={15} className="text-[#6F9277]" />}
+                                            <ArrowRight size={13} className="text-[#91A195]" />
+                                        </div>
                                     </div>
                                     <p className="mt-3 text-[10px] text-[#667066]">{order.courier.lastScan}</p>
-                                </div>
+                                </Link>
                             ))}
-                            {orders.length === 0 ? <Empty text="Orders appear after you choose a supplier quote." /> : null}
+                            {orders.length === 0 ? <Empty text="Orders appear after you choose a supplier quote." href="/auction/shop/requests?status=quoted" action="Review quotes" /> : null}
                         </div>
                     </section>
                 </div>
@@ -124,10 +140,31 @@ export default function ShopDashboard() {
     );
 }
 
-function Metric({ icon: Icon, label, value, detail }: { icon: typeof FileText; label: string; value: string; detail: string }) {
-    return <div className="rounded-2xl border border-[#DDE5DC] bg-white p-4"><Icon size={15} className="text-[#6F9277]" /><p className="mt-3 text-xl font-bold text-[#2F312F]">{value}</p><p className="mt-0.5 text-xs font-semibold text-[#414641]">{label}</p><p className="mt-1 text-[9px] text-[#8A918A]">{detail}</p></div>;
+function Metric({ href, icon: Icon, label, value, detail }: { href: string; icon: typeof FileText; label: string; value: string; detail: string }) {
+    return (
+        <Link
+            href={href}
+            aria-label={`${label}: ${value}. ${detail}`}
+            className="group rounded-2xl border border-[#DDE5DC] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#AFC2B1] hover:shadow-[0_14px_34px_-26px_rgba(54,88,69,0.55)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6F9277]"
+        >
+            <div className="flex items-center justify-between">
+                <Icon size={15} className="text-[#6F9277]" />
+                <ArrowRight size={13} className="text-[#B0BBB1] transition group-hover:translate-x-0.5 group-hover:text-[#4F6F56]" />
+            </div>
+            <p className="mt-3 text-xl font-bold text-[#2F312F]">{value}</p>
+            <p className="mt-0.5 text-xs font-semibold text-[#414641]">{label}</p>
+            <p className="mt-1 text-[9px] text-[#8A918A]">{detail}</p>
+        </Link>
+    );
 }
 
-function Empty({ text }: { text: string }) {
-    return <p className="py-9 text-center text-xs text-[#8A918A]">{text}</p>;
+function Empty({ text, href, action }: { text: string; href: string; action: string }) {
+    return (
+        <div className="py-8 text-center">
+            <p className="text-xs text-[#8A918A]">{text}</p>
+            <Link href={href} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56] hover:underline">
+                {action} <ArrowRight size={11} />
+            </Link>
+        </div>
+    );
 }

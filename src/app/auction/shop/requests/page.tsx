@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     ArrowRight,
     Bot,
@@ -43,6 +43,29 @@ export default function RequestsPage() {
     const [awardingId, setAwardingId] = useState<string | null>(null);
     const [successReference, setSuccessReference] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const requestedStatus = params.get("status");
+        const requestedId = params.get("request");
+        const validStatuses: Filter[] = ["all", "sent", "quoted", "awarded", "expired", "cancelled"];
+
+        if (requestedStatus && validStatuses.includes(requestedStatus as Filter)) {
+            setFilter(requestedStatus as Filter);
+        }
+        if (requestedId) setExpandedId(requestedId);
+    }, []);
+
+    useEffect(() => {
+        if (!loading && expandedId) {
+            window.requestAnimationFrame(() => {
+                document.getElementById(`request-${expandedId}`)?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                });
+            });
+        }
+    }, [expandedId, loading]);
 
     const filtered =
         filter === "all" ? requests : requests.filter((request) => request.status === filter);
@@ -117,7 +140,15 @@ export default function RequestsPage() {
                         <button
                             type="button"
                             key={value}
-                            onClick={() => setFilter(value)}
+                            onClick={() => {
+                                setFilter(value);
+                                setExpandedId(null);
+                                const url = new URL(window.location.href);
+                                if (value === "all") url.searchParams.delete("status");
+                                else url.searchParams.set("status", value);
+                                url.searchParams.delete("request");
+                                window.history.replaceState({}, "", url);
+                            }}
                             className={`rounded-xl px-3 py-2 text-xs font-semibold ${
                                 filter === value
                                     ? "bg-[#365845] text-white"
@@ -140,7 +171,15 @@ export default function RequestsPage() {
                         const expanded = request.id === expandedId;
                         const ranked = [...request.quotes].sort((a, b) => b.score - a.score);
                         return (
-                            <article key={request.id} className="overflow-hidden rounded-3xl border border-[#DDE5DC] bg-white">
+                            <article
+                                id={`request-${request.id}`}
+                                key={request.id}
+                                className={`scroll-mt-24 overflow-hidden rounded-3xl border bg-white transition ${
+                                    expanded
+                                        ? "border-[#9DB29F] shadow-[0_18px_45px_-36px_rgba(54,88,69,0.6)]"
+                                        : "border-[#DDE5DC]"
+                                }`}
+                            >
                                 <div className="p-5">
                                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                         <div className="flex min-w-0 items-start gap-3">
@@ -179,7 +218,14 @@ export default function RequestsPage() {
                                             </div>
                                             <button
                                                 type="button"
-                                                onClick={() => setExpandedId(expanded ? null : request.id)}
+                                                onClick={() => {
+                                                    const nextId = expanded ? null : request.id;
+                                                    setExpandedId(nextId);
+                                                    const url = new URL(window.location.href);
+                                                    if (nextId) url.searchParams.set("request", nextId);
+                                                    else url.searchParams.delete("request");
+                                                    window.history.replaceState({}, "", url);
+                                                }}
                                                 className="inline-flex items-center gap-1.5 rounded-xl border border-[#DDE5DC] px-3 py-2 text-xs font-semibold text-[#4F6F56]"
                                             >
                                                 Details {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
