@@ -11,12 +11,12 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "ReStock by Ledger — Smarter retail procurement",
   description:
-    "ReStock by Ledger connects independent retailers and trusted suppliers in one procurement workspace for demand planning, competitive bidding, ordering, and fulfillment.",
+    "ReStock by Ledger gives retailers and suppliers a protected procurement, Ninja Van fulfillment, and delivery verification workflow.",
   keywords: [
     "B2B",
     "retail procurement",
-    "supplier marketplace",
-    "demand aggregation",
+    "supplier sourcing",
+    "delivery verification",
     "Southeast Asia",
     "ReStock",
     "Ledger",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "ReStock by Ledger — Smarter retail procurement",
     description:
-      "One procurement workspace for retailers and suppliers across Southeast Asia.",
+      "Protected procurement, courier fulfillment, and evidence-backed delivery verification.",
     type: "website",
   },
 };

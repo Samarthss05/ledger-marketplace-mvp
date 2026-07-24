@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ReStock by Ledger
 
-## Getting Started
+Production-oriented procurement and fulfillment for independent retailers and
+suppliers. Counterparties operate through protected aliases; Ninja Van provides
+the delivery chain of custody; both parties submit private photo evidence.
 
-First, run the development server:
+## Workflow
+
+1. A retailer creates a structured RFQ and invites verified supplier aliases.
+2. Suppliers submit complete quotes. ReStock ranks price and delivery fit.
+3. The retailer awards one quote and an order is created with payout held.
+4. The supplier photographs sealed stock before Ninja Van collection.
+5. Ninja Van webhook events update pickup, transit, and delivery state.
+6. The retailer photographs received stock and accepts it or opens a dispute.
+7. Accepted orders release the payout state. Disputes enter independent review.
+
+Legal names, phone numbers, and addresses are restricted to the owning
+organization and backend logistics services. They are not exposed to the other
+party.
+
+## Stack
+
+- Next.js static frontend deployed to GitHub Pages
+- Supabase Auth, Postgres, Row Level Security, private Storage, and Edge Functions
+- `restock-workflow` authenticated command boundary
+- `ninjavan-webhook` raw-body HMAC verification and idempotent courier events
+
+## Local development
 
 ```bash
+cp .env.example .env.local
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Quality gates:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm audit --omit=dev --audit-level=high
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Backend operations
 
-## Learn More
+Database changes live in `supabase/migrations`. Edge Functions live in
+`supabase/functions`.
 
-To learn more about Next.js, take a look at the following resources:
+The following production configuration is required outside source control:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Add `NINJAVAN_CLIENT_SECRET` to Supabase Edge Function secrets.
+- Register
+  `https://mlhjwbzxqvszfizaxzex.supabase.co/functions/v1/ninjavan-webhook`
+  as the Ninja Van webhook URL.
+- Add approved reviewer user IDs to `public.restock_reviewers`.
+- Configure the payment provider that moves funds; database payout states are an
+  auditable workflow control and do not themselves transfer money.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The reviewer portal is `/auction/review`. Access is denied unless the signed-in
+user is active in `restock_reviewers`.
 
-## Deploy on Vercel
+## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Pushes to `main` run dependency audit, lint, type checking, a static production
+build, and GitHub Pages deployment. The Pages environment must allow `main` to
+deploy.

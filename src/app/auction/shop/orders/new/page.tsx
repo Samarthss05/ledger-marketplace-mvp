@@ -1,332 +1,221 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
     ArrowLeft,
     ArrowRight,
     Bot,
     Calendar,
     Check,
-    CheckCircle2,
-    ChevronRight,
-    CircleDollarSign,
-    Clock3,
+    CircleAlert,
+    LoaderCircle,
     Package,
     Plus,
     Search,
     Send,
     Sparkles,
     Trash2,
-    Truck,
     Users,
 } from "lucide-react";
 import {
-    getSupplierAlias,
     type OrderLine,
+    type SupplierDirectoryEntry,
     useOrderWorkflowStore,
 } from "../../../lib/order-workflow-store";
-import { formatCurrency, suppliers } from "../../../lib/mock-data";
 import { products, type Product } from "../../../lib/products-db";
 
-const steps = [
-    { label: "Order details", icon: Package },
-    { label: "AI review", icon: Bot },
-    { label: "Suppliers", icon: Users },
-    { label: "Review & send", icon: Send },
-];
+const steps = ["Order lines", "Smart review", "Suppliers", "Confirm"];
+
+function money(value: number) {
+    return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" }).format(value);
+}
 
 function suggestedTarget(product: Product) {
     return Number(Math.max(product.cost * 1.08, product.price * 0.76).toFixed(2));
 }
 
-function supplierMatchScore(supplierId: string, lines: OrderLine[]) {
-    const supplier = suppliers.find((candidate) => candidate.id === supplierId);
-    if (!supplier) return 0;
-
-    const categoryMatches = lines.filter((line) =>
-        supplier.productCategories.some((category) => {
-            const productCategory = line.category.toLowerCase();
-            const supplierCategory = category.toLowerCase();
-            return (
-                productCategory.includes(supplierCategory) ||
-                supplierCategory.includes(productCategory.split(" & ")[0])
-            );
-        })
+function supplierScore(supplier: SupplierDirectoryEntry, lines: OrderLine[]) {
+    const matches = lines.filter((line) =>
+        supplier.categoryTags.some((tag) =>
+            line.category.toLowerCase().includes(tag.toLowerCase().split(" & ")[0])
+        )
     ).length;
-    const coverage = lines.length ? categoryMatches / lines.length : 0;
+    const coverage = lines.length ? (matches / lines.length) * 100 : 0;
     return Math.round(
-        supplier.performanceScore * 0.45 +
-        supplier.onTimeDeliveryRate * 0.2 +
-        coverage * 100 * 0.35
+        supplier.performanceScore * 0.45 + supplier.onTimeRate * 0.3 + coverage * 0.25
     );
 }
 
 export default function CreateOrderPage() {
-    const { createRequest } = useOrderWorkflowStore();
-    const [dateContext] = useState(() => {
-        const today = new Date();
-        const minimum = new Date(today);
-        const suggested = new Date(today);
-        minimum.setDate(minimum.getDate() + 1);
-        suggested.setDate(suggested.getDate() + 10);
-        return {
-            todayTimestamp: today.getTime(),
-            minimum: minimum.toISOString().slice(0, 10),
-            suggested: suggested.toISOString().slice(0, 10),
-        };
-    });
+    const router = useRouter();
+    const { createRequest, supplierDirectory, loading, error: storeError } =
+        useOrderWorkflowStore();
+    const minimumDate = useMemo(() => {
+        const date = new Date();
+        date.setDate(date.getDate() + 2);
+        return date.toISOString().slice(0, 10);
+    }, []);
     const [step, setStep] = useState(0);
-    const [title, setTitle] = useState("August store replenishment");
-    const [deliveryDate, setDeliveryDate] = useState(dateContext.suggested);
+    const [search, setSearch] = useState("");
+    const [title, setTitle] = useState("");
+    const [deliveryDate, setDeliveryDate] = useState(minimumDate);
     const [priority, setPriority] = useState<"standard" | "urgent">("standard");
-    const [notes, setNotes] = useState("Deliver between 8:00 AM and 12:00 PM.");
-    const [query, setQuery] = useState("");
-    const [createdId, setCreatedId] = useState<string | null>(null);
+    const [notes, setNotes] = useState("");
+    const [lines, setLines] = useState<OrderLine[]>([]);
+    const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
+    const [submitting, setSubmitting] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
 
-    const initialProducts = [
-        products.find((product) => product.name.includes("Milo 400G")) ?? products[0],
-        products.find((product) => product.name.includes("Oyster Sauce 770G")) ?? products[1],
-    ];
-    const [lines, setLines] = useState<OrderLine[]>(
-        initialProducts.map((product, index) => ({
-            id: `LINE-${index + 1}`,
-            productId: product.id,
-            productName: product.name,
-            category: product.category,
-            quantity: index === 0 ? 120 : 80,
-            targetPrice: Number((product.price * 0.82).toFixed(2)),
-            marketPrice: product.price,
-        }))
-    );
-
-    const rankedSuppliers = useMemo(
-        () =>
-            suppliers
-                .map((supplier) => ({
-                    ...supplier,
-                    matchScore: supplierMatchScore(supplier.id, lines),
-                }))
-                .sort((a, b) => b.matchScore - a.matchScore),
-        [lines]
-    );
-    const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([
-        "SUP-001",
-        "SUP-002",
-        "SUP-006",
-    ]);
-
-    const visibleProducts = products
+    const filteredProducts = products
         .filter((product) =>
-            `${product.name} ${product.category}`.toLowerCase().includes(query.toLowerCase())
+            `${product.name} ${product.category} ${product.barcode}`
+                .toLowerCase()
+                .includes(search.toLowerCase())
         )
-        .filter((product) => !lines.some((line) => line.productId === product.id))
-        .slice(0, 6);
-
-    const marketTotal = lines.reduce(
-        (total, line) => total + line.marketPrice * line.quantity,
-        0
-    );
-    const targetTotal = lines.reduce(
-        (total, line) => total + line.targetPrice * line.quantity,
-        0
-    );
-    const aiTotal = lines.reduce((total, line) => {
-        const product = products.find((candidate) => candidate.id === line.productId);
-        return total + (product ? suggestedTarget(product) : line.targetPrice) * line.quantity;
-    }, 0);
-    const expectedSavings = marketTotal - aiTotal;
-    const daysUntilDelivery = Math.ceil(
-        (new Date(deliveryDate).getTime() - dateContext.todayTimestamp) /
-            (24 * 60 * 60 * 1000)
-    );
-    const orderReady = title.trim() && deliveryDate && lines.length > 0;
+        .slice(0, 8);
+    const rankedSuppliers = supplierDirectory
+        .map((supplier) => ({ supplier, score: supplierScore(supplier, lines) }))
+        .sort((a, b) => b.score - a.score);
+    const targetTotal = lines.reduce((sum, line) => sum + line.quantity * line.targetPrice, 0);
+    const marketTotal = lines.reduce((sum, line) => sum + line.quantity * line.marketPrice, 0);
+    const estimatedSaving = Math.max(0, marketTotal - targetTotal);
 
     const addProduct = (product: Product) => {
-        setLines((current) => [
-            ...current,
-            {
-                id: `LINE-${Date.now()}`,
-                productId: product.id,
-                productName: product.name,
-                category: product.category,
-                quantity: 24,
-                targetPrice: Number((product.price * 0.82).toFixed(2)),
-                marketPrice: product.price,
-            },
-        ]);
-        setQuery("");
-    };
-
-    const updateLine = (id: string, field: "quantity" | "targetPrice", value: number) => {
-        setLines((current) =>
-            current.map((line) =>
-                line.id === id ? { ...line, [field]: Math.max(0, value) } : line
-            )
-        );
-    };
-
-    const applyAiTargets = () => {
-        setLines((current) =>
-            current.map((line) => {
-                const product = products.find((candidate) => candidate.id === line.productId);
-                return product
-                    ? { ...line, targetPrice: suggestedTarget(product) }
-                    : line;
-            })
-        );
-    };
-
-    const toggleSupplier = (supplierId: string) => {
-        setSelectedSupplierIds((current) =>
-            current.includes(supplierId)
-                ? current.filter((id) => id !== supplierId)
-                : [...current, supplierId]
-        );
-    };
-
-    const submit = () => {
-        const request = createRequest({
-            title: title.trim(),
-            lines,
-            deliveryDate,
-            priority,
-            notes: notes.trim(),
-            selectedSupplierIds,
+        setLines((current) => {
+            if (current.some((line) => line.productId === product.id)) return current;
+            return [
+                ...current,
+                {
+                    id: crypto.randomUUID(),
+                    productId: product.id,
+                    productName: product.name,
+                    category: product.category,
+                    quantity: 1,
+                    targetPrice: suggestedTarget(product),
+                    marketPrice: product.price,
+                },
+            ];
         });
-        setCreatedId(request.id);
+        setSearch("");
     };
 
-    if (createdId) {
-        return (
-            <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-3xl border border-[#CFE0D1] bg-white p-8 text-center shadow-[0_24px_70px_-50px_rgba(55,93,73,0.6)]"
-                >
-                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#E7F2E6] text-[#4F6F56]">
-                        <CheckCircle2 size={30} />
-                    </div>
-                    <p className="mt-5 text-[10px] font-bold tracking-[0.18em] text-[#6F9277] uppercase">
-                        {createdId}
-                    </p>
-                    <h1 className="mt-2 text-2xl font-bold text-[#2F312F]">
-                        Quote request sent
-                    </h1>
-                    <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#666B66]">
-                        ReStock sent this order to {selectedSupplierIds.length} matched suppliers.
-                        You can compare their offers in Requests and approve one into an order.
-                    </p>
-                    <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-                        <Link
-                            href="/auction/shop/requests"
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4F6F56] px-5 py-3 text-sm font-semibold text-white"
-                        >
-                            Track supplier quotes <ArrowRight size={14} />
-                        </Link>
-                        <Link
-                            href="/auction/shop"
-                            className="inline-flex items-center justify-center rounded-xl border border-[#DDE5DC] px-5 py-3 text-sm font-semibold text-[#4F6F56]"
-                        >
-                            Back to dashboard
-                        </Link>
-                    </div>
-                </motion.div>
-            </div>
+    const updateLine = (id: string, patch: Partial<OrderLine>) =>
+        setLines((current) =>
+            current.map((line) => (line.id === id ? { ...line, ...patch } : line))
         );
-    }
+
+    const canContinue =
+        step === 0
+            ? title.trim().length >= 3 &&
+              lines.length > 0 &&
+              lines.every((line) => line.quantity > 0 && line.targetPrice > 0) &&
+              deliveryDate >= minimumDate
+            : step === 2
+              ? selectedSupplierIds.length > 0
+              : true;
+
+    const submit = async () => {
+        setSubmitting(true);
+        setFormError(null);
+        try {
+            await createRequest({
+                title: title.trim(),
+                lines,
+                deliveryDate,
+                priority,
+                notes: notes.trim(),
+                selectedSupplierIds,
+            });
+            router.push("/auction/shop/requests");
+        } catch (cause) {
+            setFormError(cause instanceof Error ? cause.message : "Unable to create request.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
-        <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-            <div className="flex items-start gap-3">
-                <Link
-                    href="/auction/shop"
-                    className="mt-0.5 rounded-xl border border-[#DDE5DC] bg-white p-2 text-[#666B66]"
-                    aria-label="Back to dashboard"
-                >
-                    <ArrowLeft size={16} />
-                </Link>
+        <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 lg:px-8">
+            <Link
+                href="/auction/shop"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#667066]"
+            >
+                <ArrowLeft size={13} /> Dashboard
+            </Link>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-[10px] font-bold tracking-[0.16em] text-[#6F9277] uppercase">
-                        Guided procurement
+                    <p className="text-[10px] font-bold tracking-[0.17em] text-[#6F9277] uppercase">
+                        Guided order creation
                     </p>
-                    <h1 className="text-2xl font-bold text-[#2F312F]">Create a new order</h1>
-                    <p className="mt-1 text-sm text-[#666B66]">
-                        Define what you need, let AI check it, then request supplier quotes.
+                    <h1 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">
+                        Create a sourcing request
+                    </h1>
+                    <p className="mt-2 text-sm text-[#707670]">
+                        Build the basket, review pricing guidance, then invite anonymous suppliers.
                     </p>
                 </div>
+                <p className="text-xs font-semibold text-[#6F9277]">
+                    Step {step + 1} of {steps.length}
+                </p>
             </div>
 
-            <div className="grid gap-2 rounded-2xl border border-[#DDE5DC] bg-white p-2 md:grid-cols-4">
-                {steps.map((item, index) => {
-                    const completed = index < step;
-                    const active = index === step;
-                    return (
-                        <button
-                            key={item.label}
-                            onClick={() => index < step && setStep(index)}
-                            className={`flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
-                                active
-                                    ? "bg-[#4F6F56] text-white"
-                                    : completed
-                                      ? "bg-[#EDF3EC] text-[#4F6F56]"
-                                      : "text-[#8A918A]"
-                            }`}
-                        >
-                            <span
-                                className={`flex h-7 w-7 items-center justify-center rounded-lg ${
-                                    active ? "bg-white/15" : "bg-white"
-                                }`}
-                            >
-                                {completed ? <Check size={14} /> : <item.icon size={14} />}
-                            </span>
-                            <span>
-                                <span className="block text-[9px] font-semibold uppercase opacity-65">
-                                    Step {index + 1}
-                                </span>
-                                <span className="block text-xs font-semibold">{item.label}</span>
-                            </span>
-                        </button>
-                    );
-                })}
+            <div className="mt-7 grid gap-2 sm:grid-cols-4">
+                {steps.map((label, index) => (
+                    <div
+                        key={label}
+                        className={`rounded-xl px-3 py-2.5 text-xs font-semibold ${
+                            index === step
+                                ? "bg-[#365845] text-white"
+                                : index < step
+                                  ? "bg-[#E8F1E7] text-[#3F7048]"
+                                  : "border border-[#DDE5DC] bg-white text-[#8A918A]"
+                        }`}
+                    >
+                        <span className="mr-2">{index < step ? "✓" : index + 1}</span>
+                        {label}
+                    </div>
+                ))}
             </div>
 
-            {step === 0 && (
-                <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-                    <section className="space-y-5 rounded-3xl border border-[#DDE5DC] bg-white p-5">
-                        <div>
-                            <h2 className="text-base font-bold text-[#2F312F]">Order details</h2>
-                            <p className="mt-1 text-xs text-[#8A918A]">
-                                Add products and the commercial limits suppliers should quote against.
-                            </p>
-                        </div>
+            <section className="mt-6 rounded-3xl border border-[#DDE5DC] bg-white p-5 sm:p-7">
+                {step === 0 ? (
+                    <div className="space-y-6">
                         <div className="grid gap-4 sm:grid-cols-2">
                             <label className="sm:col-span-2">
-                                <span className="mb-1.5 block text-xs font-semibold text-[#444944]">
-                                    Order name
+                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                                    Request title
                                 </span>
                                 <input
+                                    required
+                                    maxLength={140}
                                     value={title}
                                     onChange={(event) => setTitle(event.target.value)}
-                                    className="w-full rounded-xl border border-[#DDE5DC] bg-[#F8FAF7] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                    placeholder="e.g. August beverage replenishment"
+                                    className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
                                 />
                             </label>
                             <label>
-                                <span className="mb-1.5 block text-xs font-semibold text-[#444944]">
+                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
                                     Needed by
                                 </span>
-                                <input
-                                    type="date"
-                                    value={deliveryDate}
-                                    min={dateContext.minimum}
-                                    onChange={(event) => setDeliveryDate(event.target.value)}
-                                    className="w-full rounded-xl border border-[#DDE5DC] bg-[#F8FAF7] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
-                                />
+                                <div className="relative">
+                                    <Calendar
+                                        size={15}
+                                        className="pointer-events-none absolute top-3.5 left-3.5 text-[#7B837B]"
+                                    />
+                                    <input
+                                        type="date"
+                                        min={minimumDate}
+                                        value={deliveryDate}
+                                        onChange={(event) => setDeliveryDate(event.target.value)}
+                                        className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] py-3 pr-4 pl-10 text-sm outline-none focus:border-[#6F9277]"
+                                    />
+                                </div>
                             </label>
                             <label>
-                                <span className="mb-1.5 block text-xs font-semibold text-[#444944]">
+                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
                                     Priority
                                 </span>
                                 <select
@@ -334,526 +223,378 @@ export default function CreateOrderPage() {
                                     onChange={(event) =>
                                         setPriority(event.target.value as "standard" | "urgent")
                                     }
-                                    className="w-full rounded-xl border border-[#DDE5DC] bg-[#F8FAF7] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                    className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
                                 >
-                                    <option value="standard">Standard sourcing</option>
-                                    <option value="urgent">Urgent sourcing</option>
+                                    <option value="standard">Standard · 48-hour quote window</option>
+                                    <option value="urgent">Urgent · 12-hour quote window</option>
                                 </select>
                             </label>
                         </div>
 
-                        <div className="border-t border-[#EDF3EC] pt-5">
-                            <div className="mb-3 flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-sm font-bold text-[#2F312F]">Products</h3>
-                                    <p className="text-[10px] text-[#8A918A]">
-                                        Target price is your maximum preferred unit cost.
-                                    </p>
-                                </div>
-                                <span className="rounded-full bg-[#EDF3EC] px-2.5 py-1 text-[10px] font-bold text-[#4F6F56]">
-                                    {lines.length} lines
-                                </span>
-                            </div>
-                            <div className="relative mb-4">
+                        <div>
+                            <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                                Add products
+                            </span>
+                            <div className="relative">
                                 <Search
-                                    size={14}
-                                    className="absolute top-3.5 left-3.5 text-[#8A918A]"
+                                    size={15}
+                                    className="pointer-events-none absolute top-3.5 left-3.5 text-[#7B837B]"
                                 />
                                 <input
-                                    value={query}
-                                    onChange={(event) => setQuery(event.target.value)}
-                                    placeholder="Search your product catalogue"
-                                    className="w-full rounded-xl border border-[#DDE5DC] bg-[#F8FAF7] py-3 pr-4 pl-10 text-sm outline-none focus:border-[#6F9277]"
+                                    value={search}
+                                    onChange={(event) => setSearch(event.target.value)}
+                                    placeholder="Search product, category, or barcode"
+                                    className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] py-3 pr-4 pl-10 text-sm outline-none focus:border-[#6F9277]"
                                 />
-                                {query && visibleProducts.length > 0 && (
-                                    <div className="absolute z-20 mt-2 w-full rounded-2xl border border-[#DDE5DC] bg-white p-2 shadow-xl">
-                                        {visibleProducts.map((product) => (
-                                            <button
-                                                key={product.id}
-                                                onClick={() => addProduct(product)}
-                                                className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left hover:bg-[#F4F7F3]"
-                                            >
-                                                <span>
-                                                    <span className="block text-xs font-semibold text-[#2F312F]">
-                                                        {product.name}
-                                                    </span>
-                                                    <span className="text-[10px] text-[#8A918A]">
-                                                        {product.category}
-                                                    </span>
-                                                </span>
-                                                <Plus size={14} className="text-[#4F6F56]" />
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
-                            <div className="space-y-3">
-                                {lines.map((line) => (
-                                    <div
-                                        key={line.id}
-                                        className="grid gap-3 rounded-2xl border border-[#E5EBE3] p-4 sm:grid-cols-[1fr_100px_120px_32px] sm:items-end"
-                                    >
-                                        <div>
-                                            <p className="text-xs font-semibold text-[#2F312F]">
-                                                {line.productName}
-                                            </p>
-                                            <p className="mt-1 text-[10px] text-[#8A918A]">
-                                                {line.category} · Retail {formatCurrency(line.marketPrice)}
-                                            </p>
-                                        </div>
-                                        <label>
-                                            <span className="mb-1 block text-[10px] font-semibold text-[#666B66]">
-                                                Quantity
-                                            </span>
-                                            <input
-                                                aria-label={`Quantity for ${line.productName}`}
-                                                type="number"
-                                                min="1"
-                                                value={line.quantity}
-                                                onChange={(event) =>
-                                                    updateLine(
-                                                        line.id,
-                                                        "quantity",
-                                                        Number(event.target.value)
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border border-[#DDE5DC] px-2.5 py-2 text-xs"
-                                            />
-                                        </label>
-                                        <label>
-                                            <span className="mb-1 block text-[10px] font-semibold text-[#666B66]">
-                                                Target / unit
-                                            </span>
-                                            <input
-                                                aria-label={`Target price for ${line.productName}`}
-                                                type="number"
-                                                min="0.01"
-                                                step="0.01"
-                                                value={line.targetPrice}
-                                                onChange={(event) =>
-                                                    updateLine(
-                                                        line.id,
-                                                        "targetPrice",
-                                                        Number(event.target.value)
-                                                    )
-                                                }
-                                                className="w-full rounded-lg border border-[#DDE5DC] px-2.5 py-2 text-xs"
-                                            />
-                                        </label>
+                            {search ? (
+                                <div className="mt-2 overflow-hidden rounded-xl border border-[#DDE5DC]">
+                                    {filteredProducts.map((product) => (
                                         <button
-                                            onClick={() =>
-                                                setLines((current) =>
-                                                    current.filter((item) => item.id !== line.id)
-                                                )
-                                            }
-                                            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#A16B6B] hover:bg-[#FFF1F1]"
-                                            aria-label={`Remove ${line.productName}`}
+                                            type="button"
+                                            key={product.id}
+                                            onClick={() => addProduct(product)}
+                                            className="flex w-full items-center justify-between border-b border-[#EEF1ED] px-4 py-3 text-left last:border-0 hover:bg-[#F7F9F5]"
                                         >
-                                            <Trash2 size={13} />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </section>
-
-                    <aside className="space-y-4">
-                        <div className="rounded-3xl bg-[#365845] p-5 text-white">
-                            <p className="text-[10px] font-semibold tracking-[0.15em] text-white/60 uppercase">
-                                Draft summary
-                            </p>
-                            <p className="mt-3 text-2xl font-bold">{formatCurrency(targetTotal)}</p>
-                            <p className="text-xs text-white/65">target order value</p>
-                            <div className="mt-5 space-y-3 border-t border-white/10 pt-4 text-xs">
-                                <div className="flex justify-between">
-                                    <span className="text-white/60">Products</span>
-                                    <span className="font-semibold">{lines.length}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-white/60">Total units</span>
-                                    <span className="font-semibold">
-                                        {lines
-                                            .reduce((total, line) => total + line.quantity, 0)
-                                            .toLocaleString()}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-white/60">Delivery window</span>
-                                    <span className="font-semibold">
-                                        {daysUntilDelivery > 0 ? `${daysUntilDelivery} days` : "Overdue"}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="rounded-2xl border border-[#DDE5DC] bg-white p-4">
-                            <div className="flex items-start gap-3">
-                                <Sparkles size={16} className="mt-0.5 text-[#6F9277]" />
-                                <div>
-                                    <p className="text-xs font-bold text-[#2F312F]">Next: AI review</p>
-                                    <p className="mt-1 text-[10px] leading-5 text-[#8A918A]">
-                                        ReStock will check target prices, timing, supplier coverage,
-                                        and consolidation savings before any request is sent.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </aside>
-                </div>
-            )}
-
-            {step === 1 && (
-                <section className="space-y-5">
-                    <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#2F4C3C] to-[#577760] p-6 text-white">
-                        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                            <div className="flex items-start gap-4">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/12">
-                                    <Bot size={22} />
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h2 className="text-lg font-bold">ReStock AI order review</h2>
-                                        <span className="rounded-full bg-white/12 px-2 py-0.5 text-[9px] font-semibold">
-                                            Complete
-                                        </span>
-                                    </div>
-                                    <p className="mt-1 max-w-2xl text-sm text-white/65">
-                                        Your order is viable. AI found a lower target range and
-                                        enough supplier coverage for a competitive quote round.
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={applyAiTargets}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#365845]"
-                            >
-                                <Sparkles size={13} /> Apply AI target prices
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <AiMetric
-                            icon={CircleDollarSign}
-                            label="Expected savings"
-                            value={formatCurrency(expectedSavings)}
-                            note={`${Math.max(0, Math.round((expectedSavings / marketTotal) * 100))}% below retail value`}
-                        />
-                        <AiMetric
-                            icon={Clock3}
-                            label="Delivery confidence"
-                            value={daysUntilDelivery >= 7 ? "High" : "Medium"}
-                            note={`${Math.max(daysUntilDelivery, 0)} days available to source`}
-                        />
-                        <AiMetric
-                            icon={Users}
-                            label="Supplier coverage"
-                            value={`${rankedSuppliers.filter((supplier) => supplier.matchScore >= 80).length} strong matches`}
-                            note="Based on category fit and reliability"
-                        />
-                    </div>
-
-                    <div className="grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
-                        <div className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
-                            <h3 className="text-sm font-bold text-[#2F312F]">AI price recommendations</h3>
-                            <p className="mt-1 text-xs text-[#8A918A]">
-                                Targets balance supplier cost, order size, and your resale margin.
-                            </p>
-                            <div className="mt-4 divide-y divide-[#EDF3EC]">
-                                {lines.map((line) => {
-                                    const product = products.find(
-                                        (candidate) => candidate.id === line.productId
-                                    );
-                                    const recommendation = product
-                                        ? suggestedTarget(product)
-                                        : line.targetPrice;
-                                    return (
-                                        <div
-                                            key={line.id}
-                                            className="grid gap-3 py-4 sm:grid-cols-[1fr_auto_auto] sm:items-center"
-                                        >
-                                            <div>
-                                                <p className="text-xs font-semibold text-[#2F312F]">
-                                                    {line.productName}
-                                                </p>
-                                                <p className="mt-1 text-[10px] text-[#8A918A]">
-                                                    {line.quantity} units
-                                                </p>
-                                            </div>
-                                            <div className="text-left sm:text-right">
-                                                <p className="text-[9px] text-[#8A918A]">Your target</p>
-                                                <p className="text-xs font-semibold text-[#666B66]">
-                                                    {formatCurrency(line.targetPrice)}
-                                                </p>
-                                            </div>
-                                            <div className="rounded-xl bg-[#EDF3EC] px-3 py-2 text-left sm:text-right">
-                                                <p className="text-[9px] text-[#6F9277]">AI target</p>
-                                                <p className="text-xs font-bold text-[#4F6F56]">
-                                                    {formatCurrency(recommendation)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
-                                <h3 className="text-sm font-bold text-[#2F312F]">Recommended strategy</h3>
-                                <div className="mt-4 space-y-3">
-                                    <Recommendation
-                                        icon={Send}
-                                        title="Request competitive quotes"
-                                        note="Best fit for this mixed-product order."
-                                    />
-                                    <Recommendation
-                                        icon={Truck}
-                                        title="Use one delivery window"
-                                        note="Ask suppliers to consolidate every line."
-                                    />
-                                    <Recommendation
-                                        icon={Calendar}
-                                        title="Keep the current date"
-                                        note="The sourcing window is sufficient."
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {step === 2 && (
-                <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h2 className="text-base font-bold text-[#2F312F]">Choose suppliers</h2>
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[#EDF3EC] px-2 py-1 text-[9px] font-bold text-[#4F6F56]">
-                                    <Bot size={10} /> AI ranked
-                                </span>
-                            </div>
-                            <p className="mt-1 text-xs text-[#8A918A]">
-                                Invite at least one supplier. Three gives you a healthier comparison.
-                            </p>
-                        </div>
-                        <p className="text-xs font-semibold text-[#4F6F56]">
-                            {selectedSupplierIds.length} selected
-                        </p>
-                    </div>
-                    <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        {rankedSuppliers.map((supplier, index) => {
-                            const selected = selectedSupplierIds.includes(supplier.id);
-                            return (
-                                <button
-                                    key={supplier.id}
-                                    onClick={() => toggleSupplier(supplier.id)}
-                                    className={`rounded-2xl border p-4 text-left transition-all ${
-                                        selected
-                                            ? "border-[#6F9277] bg-[#F4F8F3] ring-1 ring-[#6F9277]/20"
-                                            : "border-[#E1E8DF] bg-white hover:border-[#A9BEAB]"
-                                    }`}
-                                >
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#365845] text-xs font-bold text-white">
-                                                S{index + 1}
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-[#2F312F]">
-                                                    {getSupplierAlias(supplier.id)}
-                                                </p>
-                                                <p className="mt-0.5 text-[10px] text-[#8A918A]">
-                                                    Identity protected · coverage confirmed
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <span
-                                            className={`flex h-5 w-5 items-center justify-center rounded-md border ${
-                                                selected
-                                                    ? "border-[#4F6F56] bg-[#4F6F56] text-white"
-                                                    : "border-[#C9D4C6]"
-                                            }`}
-                                        >
-                                            {selected && <Check size={12} />}
-                                        </span>
-                                    </div>
-                                    <div className="mt-4 flex items-center justify-between rounded-xl bg-white px-3 py-2.5">
-                                        <div>
-                                            <p className="text-[9px] text-[#8A918A]">
-                                                ReStock AI match
-                                            </p>
-                                            <p className="text-sm font-bold text-[#4F6F56]">
-                                                {supplier.matchScore}%
-                                            </p>
-                                        </div>
-                                        {index === 0 && (
-                                            <span className="rounded-full bg-[#E7F2E6] px-2 py-1 text-[9px] font-bold text-[#4F6F56]">
-                                                Best match
+                                            <span>
+                                                <span className="block text-xs font-semibold text-[#2F312F]">
+                                                    {product.name}
+                                                </span>
+                                                <span className="text-[10px] text-[#8A918A]">
+                                                    {product.category} · {product.barcode}
+                                                </span>
                                             </span>
-                                        )}
-                                    </div>
-                                    <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] text-[#666B66]">
-                                        <span>{supplier.onTimeDeliveryRate}% on-time</span>
-                                        <span>{supplier.qualityScore}% quality</span>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </section>
-            )}
+                                            <Plus size={14} className="text-[#4F6F56]" />
+                                        </button>
+                                    ))}
+                                    {filteredProducts.length === 0 ? (
+                                        <p className="px-4 py-3 text-xs text-[#8A918A]">
+                                            No matching products.
+                                        </p>
+                                    ) : null}
+                                </div>
+                            ) : null}
+                        </div>
 
-            {step === 3 && (
-                <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-                    <section className="space-y-5 rounded-3xl border border-[#DDE5DC] bg-white p-5">
-                        <div>
-                            <h2 className="text-base font-bold text-[#2F312F]">Review quote request</h2>
-                            <p className="mt-1 text-xs text-[#8A918A]">
-                                Suppliers receive product quantities, target prices, and delivery terms.
-                            </p>
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-3">
-                            <Summary label="Order" value={title} />
-                            <Summary label="Needed by" value={new Date(`${deliveryDate}T00:00:00`).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })} />
-                            <Summary label="Priority" value={priority === "urgent" ? "Urgent" : "Standard"} />
-                        </div>
-                        <div className="overflow-hidden rounded-2xl border border-[#E1E8DF]">
-                            <div className="grid grid-cols-[1fr_72px_90px] gap-3 bg-[#F4F7F3] px-4 py-2.5 text-[9px] font-bold tracking-wide text-[#8A918A] uppercase">
-                                <span>Product</span>
-                                <span>Qty</span>
-                                <span>Target</span>
-                            </div>
+                        <div className="space-y-3">
                             {lines.map((line) => (
                                 <div
                                     key={line.id}
-                                    className="grid grid-cols-[1fr_72px_90px] gap-3 border-t border-[#EDF3EC] px-4 py-3 text-xs"
+                                    className="grid gap-3 rounded-2xl border border-[#E1E7DF] bg-[#FAFBF9] p-4 sm:grid-cols-[1fr_110px_130px_36px] sm:items-end"
                                 >
-                                    <span className="font-semibold text-[#2F312F]">
-                                        {line.productName}
-                                    </span>
-                                    <span className="text-[#666B66]">{line.quantity}</span>
-                                    <span className="font-semibold text-[#4F6F56]">
-                                        {formatCurrency(line.targetPrice)}
-                                    </span>
+                                    <div>
+                                        <p className="text-xs font-bold text-[#2F312F]">
+                                            {line.productName}
+                                        </p>
+                                        <p className="mt-1 text-[10px] text-[#8A918A]">{line.category}</p>
+                                    </div>
+                                    <label>
+                                        <span className="mb-1 block text-[10px] text-[#777E77]">Quantity</span>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            value={line.quantity}
+                                            onChange={(event) =>
+                                                updateLine(line.id, {
+                                                    quantity: Math.max(0, Number(event.target.value)),
+                                                })
+                                            }
+                                            className="w-full rounded-lg border border-[#D7DFD5] bg-white px-3 py-2 text-xs"
+                                        />
+                                    </label>
+                                    <label>
+                                        <span className="mb-1 block text-[10px] text-[#777E77]">
+                                            Target / unit
+                                        </span>
+                                        <input
+                                            type="number"
+                                            min={0.01}
+                                            step={0.01}
+                                            value={line.targetPrice}
+                                            onChange={(event) =>
+                                                updateLine(line.id, {
+                                                    targetPrice: Math.max(0, Number(event.target.value)),
+                                                })
+                                            }
+                                            className="w-full rounded-lg border border-[#D7DFD5] bg-white px-3 py-2 text-xs"
+                                        />
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setLines((current) =>
+                                                current.filter((candidate) => candidate.id !== line.id)
+                                            )
+                                        }
+                                        className="rounded-lg p-2 text-[#A45F48] hover:bg-[#FFF2EF]"
+                                        aria-label={`Remove ${line.productName}`}
+                                    >
+                                        <Trash2 size={15} />
+                                    </button>
                                 </div>
                             ))}
-                        </div>
-                        <label>
-                            <span className="mb-1.5 block text-xs font-semibold text-[#444944]">
-                                Delivery notes
-                            </span>
-                            <textarea
-                                value={notes}
-                                onChange={(event) => setNotes(event.target.value)}
-                                rows={3}
-                                className="w-full resize-none rounded-xl border border-[#DDE5DC] bg-[#F8FAF7] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
-                            />
-                        </label>
-                    </section>
-                    <aside className="space-y-4">
-                        <div className="rounded-3xl bg-[#365845] p-5 text-white">
-                            <p className="text-[10px] font-bold tracking-[0.16em] text-white/60 uppercase">
-                                Request summary
-                            </p>
-                            <p className="mt-3 text-2xl font-bold">{formatCurrency(targetTotal)}</p>
-                            <p className="text-xs text-white/60">target value</p>
-                            <div className="mt-5 space-y-3 border-t border-white/10 pt-4 text-xs">
-                                <div className="flex justify-between">
-                                    <span className="text-white/60">Products</span>
-                                    <span>{lines.length}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-white/60">Suppliers</span>
-                                    <span>{selectedSupplierIds.length}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-white/60">Potential savings</span>
-                                    <span>{formatCurrency(expectedSavings)}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="rounded-2xl border border-[#CFE0D1] bg-[#F4F8F3] p-4">
-                            <div className="flex items-start gap-3">
-                                <Bot size={16} className="mt-0.5 text-[#4F6F56]" />
-                                <div>
-                                    <p className="text-xs font-bold text-[#2F312F]">AI confidence: high</p>
-                                    <p className="mt-1 text-[10px] leading-5 text-[#666B66]">
-                                        The targets are competitive and the selected suppliers can cover
-                                        this order within the requested window.
+                            {lines.length === 0 ? (
+                                <div className="rounded-2xl border border-dashed border-[#C9D4C6] px-5 py-10 text-center">
+                                    <Package size={24} className="mx-auto text-[#A9B4A6]" />
+                                    <p className="mt-2 text-xs text-[#7B817B]">
+                                        Search and add at least one product.
                                     </p>
                                 </div>
+                            ) : null}
+                        </div>
+
+                        <label>
+                            <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                                Receiving instructions
+                            </span>
+                            <textarea
+                                maxLength={2000}
+                                rows={3}
+                                value={notes}
+                                onChange={(event) => setNotes(event.target.value)}
+                                placeholder="Receiving hours, pallet limits, or handling instructions"
+                                className="w-full resize-none rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                            />
+                        </label>
+                    </div>
+                ) : null}
+
+                {step === 1 ? (
+                    <div>
+                        <div className="flex items-start gap-3">
+                            <div className="rounded-xl bg-[#EAF3E8] p-2.5 text-[#4F6F56]">
+                                <Bot size={19} />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-[#2F312F]">Smart order review</h2>
+                                <p className="mt-1 text-xs leading-5 text-[#707670]">
+                                    ReStock checks pricing, timing, and basket structure before the RFQ
+                                    is sent. Guidance is deterministic and remains reviewable by you.
+                                </p>
                             </div>
                         </div>
-                    </aside>
+                        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                            <Insight label="Target basket" value={money(targetTotal)} detail="Your supplier ceiling" />
+                            <Insight label="Retail benchmark" value={money(marketTotal)} detail="Current catalogue value" />
+                            <Insight label="Potential saving" value={money(estimatedSaving)} detail="Before delivery costs" />
+                        </div>
+                        <div className="mt-5 space-y-3">
+                            <ReviewRow
+                                ok={estimatedSaving > 0}
+                                title="Pricing check"
+                                detail={
+                                    estimatedSaving > 0
+                                        ? `Targets are ${Math.round((estimatedSaving / marketTotal) * 100)}% below retail benchmarks.`
+                                        : "Targets are at or above retail benchmarks; consider reviewing unit prices."
+                                }
+                            />
+                            <ReviewRow
+                                ok={new Date(deliveryDate).getTime() - Date.now() >= 3 * 86_400_000}
+                                title="Delivery feasibility"
+                                detail={
+                                    priority === "urgent"
+                                        ? "Urgent requests close after 12 hours, reducing response time."
+                                        : "Suppliers receive a 48-hour response window."
+                                }
+                            />
+                            <ReviewRow
+                                ok={notes.trim().length > 0}
+                                title="Receiving clarity"
+                                detail={
+                                    notes.trim()
+                                        ? "Receiving instructions are included."
+                                        : "Add receiving hours or special handling notes if relevant."
+                                }
+                            />
+                        </div>
+                    </div>
+                ) : null}
+
+                {step === 2 ? (
+                    <div>
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-lg font-bold text-[#2F312F]">
+                                    Invite protected suppliers
+                                </h2>
+                                <p className="mt-1 text-xs leading-5 text-[#707670]">
+                                    Only supplier aliases and verified performance data are shown.
+                                </p>
+                            </div>
+                            <Users size={20} className="text-[#6F9277]" />
+                        </div>
+                        {loading ? (
+                            <div className="flex items-center justify-center py-16 text-[#6F9277]">
+                                <LoaderCircle className="animate-spin" size={22} />
+                            </div>
+                        ) : rankedSuppliers.length ? (
+                            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                                {rankedSuppliers.map(({ supplier, score }, index) => {
+                                    const selected = selectedSupplierIds.includes(supplier.id);
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={supplier.id}
+                                            onClick={() =>
+                                                setSelectedSupplierIds((current) =>
+                                                    selected
+                                                        ? current.filter((id) => id !== supplier.id)
+                                                        : [...current, supplier.id]
+                                                )
+                                            }
+                                            className={`rounded-2xl border p-4 text-left transition ${
+                                                selected
+                                                    ? "border-[#6F9277] bg-[#F1F6F0] ring-1 ring-[#6F9277]/20"
+                                                    : "border-[#DDE5DC] hover:bg-[#FAFBF9]"
+                                            }`}
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-bold text-[#2F312F]">
+                                                            {supplier.aliasCode}
+                                                        </p>
+                                                        {index === 0 ? (
+                                                            <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F1E7] px-2 py-0.5 text-[8px] font-bold text-[#3F7048]">
+                                                                <Sparkles size={8} /> Best match
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+                                                    <p className="mt-1 text-[10px] text-[#8A918A]">
+                                                        {supplier.categoryTags.join(" · ") || "General supply"}
+                                                    </p>
+                                                </div>
+                                                <span
+                                                    className={`flex h-6 w-6 items-center justify-center rounded-full ${
+                                                        selected
+                                                            ? "bg-[#4F6F56] text-white"
+                                                            : "border border-[#CBD5C8] text-transparent"
+                                                    }`}
+                                                >
+                                                    <Check size={13} />
+                                                </span>
+                                            </div>
+                                            <div className="mt-4 flex gap-4 text-[10px] text-[#667066]">
+                                                <span>
+                                                    Match <b className="text-[#2F312F]">{score}</b>
+                                                </span>
+                                                <span>
+                                                    On time{" "}
+                                                    <b className="text-[#2F312F]">
+                                                        {supplier.onTimeRate || "New"}{supplier.onTimeRate ? "%" : ""}
+                                                    </b>
+                                                </span>
+                                                <span>
+                                                    Orders{" "}
+                                                    <b className="text-[#2F312F]">{supplier.completedOrders}</b>
+                                                </span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="mt-6 rounded-2xl border border-dashed border-[#C9D4C6] p-8 text-center">
+                                <CircleAlert size={22} className="mx-auto text-[#A45F48]" />
+                                <p className="mt-3 text-sm font-semibold text-[#2F312F]">
+                                    No suppliers are accepting requests
+                                </p>
+                                <p className="mt-1 text-xs text-[#7B817B]">
+                                    Your draft is safe. Try again when a supplier completes onboarding.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                ) : null}
+
+                {step === 3 ? (
+                    <div>
+                        <h2 className="text-lg font-bold text-[#2F312F]">Confirm and send</h2>
+                        <p className="mt-1 text-xs text-[#707670]">
+                            This creates an auditable request and notifies only the selected suppliers.
+                        </p>
+                        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                            <Summary label="Request" value={title} />
+                            <Summary label="Needed by" value={new Date(`${deliveryDate}T12:00:00`).toLocaleDateString("en-SG", { dateStyle: "medium" })} />
+                            <Summary label="Products" value={`${lines.length} lines · ${lines.reduce((sum, line) => sum + line.quantity, 0)} units`} />
+                            <Summary label="Target value" value={money(targetTotal)} />
+                            <Summary label="Suppliers invited" value={`${selectedSupplierIds.length} protected aliases`} />
+                            <Summary label="Quote window" value={priority === "urgent" ? "12 hours" : "48 hours"} />
+                        </div>
+                        <div className="mt-5 rounded-2xl bg-[#F3F7F2] p-4 text-xs leading-5 text-[#5E685E]">
+                            The retailer and supplier legal names are never shown to each other.
+                            ReStock records the RFQ, quote decision, Ninja Van scans, and photo
+                            verification under protected aliases.
+                        </div>
+                    </div>
+                ) : null}
+
+                {(formError || storeError) ? (
+                    <p role="alert" className="mt-5 rounded-xl bg-[#FFF2EF] px-4 py-3 text-xs text-[#A33A2B]">
+                        {formError ?? storeError}
+                    </p>
+                ) : null}
+
+                <div className="mt-7 flex items-center justify-between border-t border-[#E8ECE7] pt-5">
+                    <button
+                        type="button"
+                        onClick={() => setStep((current) => Math.max(0, current - 1))}
+                        disabled={step === 0 || submitting}
+                        className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold text-[#667066] disabled:opacity-30"
+                    >
+                        <ArrowLeft size={13} /> Back
+                    </button>
+                    {step < steps.length - 1 ? (
+                        <button
+                            type="button"
+                            onClick={() => setStep((current) => current + 1)}
+                            disabled={!canContinue}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-[#4F6F56] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40"
+                        >
+                            Continue <ArrowRight size={13} />
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => void submit()}
+                            disabled={submitting}
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#365845] px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+                        >
+                            {submitting ? (
+                                <LoaderCircle className="animate-spin" size={14} />
+                            ) : (
+                                <Send size={14} />
+                            )}
+                            Send quote request
+                        </button>
+                    )}
                 </div>
+            </section>
+        </div>
+    );
+}
+
+function Insight({ label, value, detail }: { label: string; value: string; detail: string }) {
+    return (
+        <div className="rounded-2xl border border-[#DDE5DC] p-4">
+            <p className="text-[10px] font-semibold text-[#7B817B]">{label}</p>
+            <p className="mt-1 text-xl font-bold text-[#2F312F]">{value}</p>
+            <p className="mt-1 text-[10px] text-[#8A918A]">{detail}</p>
+        </div>
+    );
+}
+
+function ReviewRow({ ok, title, detail }: { ok: boolean; title: string; detail: string }) {
+    return (
+        <div className="flex items-start gap-3 rounded-2xl bg-[#FAFBF9] p-4">
+            {ok ? (
+                <Check size={17} className="mt-0.5 text-[#4F6F56]" />
+            ) : (
+                <CircleAlert size={17} className="mt-0.5 text-[#B26A35]" />
             )}
-
-            <div className="flex items-center justify-between rounded-2xl border border-[#DDE5DC] bg-white p-3">
-                <button
-                    onClick={() => setStep((current) => Math.max(0, current - 1))}
-                    disabled={step === 0}
-                    className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[#666B66] disabled:opacity-30"
-                >
-                    <ArrowLeft size={14} /> Back
-                </button>
-                {step < steps.length - 1 ? (
-                    <button
-                        onClick={() => setStep((current) => Math.min(steps.length - 1, current + 1))}
-                        disabled={!orderReady || (step === 2 && selectedSupplierIds.length === 0)}
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#4F6F56] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                        Continue <ChevronRight size={14} />
-                    </button>
-                ) : (
-                    <button
-                        onClick={submit}
-                        disabled={selectedSupplierIds.length === 0}
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#4F6F56] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
-                    >
-                        <Send size={14} /> Send quote request
-                    </button>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function AiMetric({
-    icon: Icon,
-    label,
-    value,
-    note,
-}: {
-    icon: typeof Bot;
-    label: string;
-    value: string;
-    note: string;
-}) {
-    return (
-        <div className="rounded-2xl border border-[#DDE5DC] bg-white p-4">
-            <Icon size={16} className="mb-3 text-[#6F9277]" />
-            <p className="text-[10px] font-semibold tracking-wide text-[#8A918A] uppercase">{label}</p>
-            <p className="mt-1 text-lg font-bold text-[#2F312F]">{value}</p>
-            <p className="mt-0.5 text-[10px] text-[#8A918A]">{note}</p>
-        </div>
-    );
-}
-
-function Recommendation({
-    icon: Icon,
-    title,
-    note,
-}: {
-    icon: typeof Bot;
-    title: string;
-    note: string;
-}) {
-    return (
-        <div className="flex items-start gap-3 rounded-xl bg-[#F4F7F3] p-3">
-            <Icon size={14} className="mt-0.5 text-[#4F6F56]" />
             <div>
-                <p className="text-xs font-semibold text-[#2F312F]">{title}</p>
-                <p className="mt-0.5 text-[10px] leading-4 text-[#8A918A]">{note}</p>
+                <p className="text-xs font-bold text-[#2F312F]">{title}</p>
+                <p className="mt-1 text-[11px] leading-5 text-[#707670]">{detail}</p>
             </div>
         </div>
     );
@@ -861,9 +602,9 @@ function Recommendation({
 
 function Summary({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-xl bg-[#F4F7F3] p-3">
-            <p className="text-[9px] font-semibold tracking-wide text-[#8A918A] uppercase">{label}</p>
-            <p className="mt-1 text-xs font-bold text-[#2F312F]">{value}</p>
+        <div className="rounded-2xl border border-[#E1E7DF] p-4">
+            <p className="text-[10px] font-semibold text-[#8A918A]">{label}</p>
+            <p className="mt-1 text-sm font-bold text-[#2F312F]">{value}</p>
         </div>
     );
 }

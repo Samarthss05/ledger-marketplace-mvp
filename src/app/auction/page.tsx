@@ -75,14 +75,14 @@ export default function AuctionLanding() {
                                     <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#6F9277] uppercase">Retailer workspace</p>
                                     <h2 className="mb-2 text-xl font-bold text-[#2F312F]">Buy for my shop</h2>
                                     <p className="mb-6 text-sm leading-relaxed text-[#666B66]">
-                                        Build one clear order, improve it with AI, compare supplier
+                                        Build one clear order, improve it with smart checks, compare supplier
                                         quotes, and keep fulfillment moving in one place.
                                     </p>
 
                                     {/* Value props */}
                                     <div className="space-y-2.5 mb-6">
                                         {[
-                                            { icon: Bot, text: "AI-assisted order and price review" },
+                                            { icon: Bot, text: "Automated order and price review" },
                                             { icon: Shield, text: "Buy from verified suppliers" },
                                             { icon: Sparkles, text: "Create and reorder faster" },
                                         ].map((item) => (

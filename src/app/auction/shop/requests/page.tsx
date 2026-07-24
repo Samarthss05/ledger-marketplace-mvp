@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { useState } from "react";
 import {
     ArrowRight,
     Bot,
@@ -12,6 +11,7 @@ import {
     CircleDollarSign,
     Clock3,
     FileText,
+    LoaderCircle,
     Package,
     Plus,
     Send,
@@ -20,398 +20,300 @@ import {
     Users,
 } from "lucide-react";
 import {
-    getSupplierAlias,
     type SourcingRequest,
     type SupplierQuote,
     useOrderWorkflowStore,
 } from "../../lib/order-workflow-store";
-import { formatCurrency } from "../../lib/mock-data";
 
-type Filter = "all" | "sent" | "quoted" | "awarded";
+type Filter = "all" | SourcingRequest["status"];
 
-function requestValue(request: SourcingRequest) {
-    return request.lines.reduce(
-        (total, line) => total + line.targetPrice * line.quantity,
-        0
-    );
+function money(value: number) {
+    return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" }).format(value);
 }
 
-function bestQuote(request: SourcingRequest) {
-    return [...request.quotes].sort((a, b) => b.score - a.score)[0];
+function targetValue(request: SourcingRequest) {
+    return request.lines.reduce((sum, line) => sum + line.quantity * line.targetPrice, 0);
 }
 
-export default function SourcingRequestsPage() {
-    const { requests, awardQuote } = useOrderWorkflowStore();
+export default function RequestsPage() {
+    const { requests, loading, error, awardQuote } = useOrderWorkflowStore();
     const [filter, setFilter] = useState<Filter>("all");
-    const [expandedId, setExpandedId] = useState<string | null>("RFQ-4901");
-    const [awardedOrderId, setAwardedOrderId] = useState<string | null>(null);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [awardingId, setAwardingId] = useState<string | null>(null);
+    const [successReference, setSuccessReference] = useState<string | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
 
     const filtered =
-        filter === "all"
-            ? requests
-            : requests.filter((request) => request.status === filter);
-    const quotesReady = requests.filter((request) => request.status === "quoted").length;
-    const totalOpenValue = requests
-        .filter((request) => request.status !== "awarded")
-        .reduce((total, request) => total + requestValue(request), 0);
+        filter === "all" ? requests : requests.filter((request) => request.status === filter);
 
-    const selectQuote = (requestId: string, quoteId: string) => {
-        const order = awardQuote(requestId, quoteId);
-        if (order) setAwardedOrderId(order.id);
+    const selectQuote = async (requestId: string, quoteId: string) => {
+        setAwardingId(quoteId);
+        setActionError(null);
+        try {
+            const order = await awardQuote(requestId, quoteId);
+            setSuccessReference(order.reference);
+        } catch (cause) {
+            setActionError(cause instanceof Error ? cause.message : "Unable to award quote.");
+        } finally {
+            setAwardingId(null);
+        }
     };
 
     return (
-        <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl space-y-6 px-4 py-7 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-[10px] font-bold tracking-[0.16em] text-[#6F9277] uppercase">
+                    <p className="text-[10px] font-bold tracking-[0.17em] text-[#6F9277] uppercase">
                         Sourcing
                     </p>
-                    <h1 className="text-2xl font-bold text-[#2F312F]">Supplier quote requests</h1>
-                    <p className="mt-1 text-sm text-[#666B66]">
-                        Track every request from supplier outreach through quote approval.
+                    <h1 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">
+                        Quote requests
+                    </h1>
+                    <p className="mt-2 text-sm text-[#707670]">
+                        Compare protected supplier offers and create a fulfillment order.
                     </p>
                 </div>
                 <Link
                     href="/auction/shop/orders/new"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4F6F56] px-4 py-2.5 text-sm font-semibold text-white"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4F6F56] px-4 py-2.5 text-sm font-bold text-white"
                 >
-                    <Plus size={14} /> Create order
+                    <Plus size={15} /> New request
                 </Link>
             </div>
 
-            {awardedOrderId && (
-                <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col gap-3 rounded-2xl border border-[#CFE0D1] bg-[#F4F8F3] p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
+            {successReference ? (
+                <div className="flex flex-col gap-3 rounded-2xl border border-[#CFE0D1] bg-[#F4F8F3] p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
                         <CheckCircle2 size={18} className="mt-0.5 text-[#4F6F56]" />
                         <div>
-                            <p className="text-sm font-bold text-[#2F312F]">Supplier awarded</p>
-                            <p className="text-xs text-[#666B66]">
-                                Order {awardedOrderId} is confirmed and ready for fulfillment tracking.
-                            </p>
+                            <p className="text-sm font-bold text-[#2F312F]">Order confirmed</p>
+                            <p className="text-xs text-[#667066]">{successReference} is awaiting supplier handoff proof.</p>
                         </div>
                     </div>
-                    <Link
-                        href="/auction/shop/orders"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56]"
-                    >
-                        View order <ArrowRight size={12} />
+                    <Link href="/auction/shop/orders" className="inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56]">
+                        Track order <ArrowRight size={12} />
                     </Link>
-                </motion.div>
-            )}
+                </div>
+            ) : null}
 
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <Metric
-                    icon={FileText}
-                    label="Open requests"
-                    value={requests.filter((request) => request.status !== "awarded").length.toString()}
-                    note="still being sourced"
-                />
-                <Metric
-                    icon={Sparkles}
-                    label="Quotes ready"
-                    value={quotesReady.toString()}
-                    note="need your decision"
-                />
-                <Metric
-                    icon={Users}
-                    label="Suppliers contacted"
-                    value={new Set(requests.flatMap((request) => request.selectedSupplierIds)).size.toString()}
-                    note="across active requests"
-                />
-                <Metric
-                    icon={CircleDollarSign}
-                    label="Open value"
-                    value={formatCurrency(totalOpenValue)}
-                    note="at target prices"
-                />
+            {(error || actionError) ? (
+                <p role="alert" className="rounded-xl bg-[#FFF2EF] px-4 py-3 text-xs text-[#A33A2B]">
+                    {actionError ?? error}
+                </p>
+            ) : null}
+
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Metric icon={FileText} label="Open requests" value={requests.filter((request) => ["sent", "quoted"].includes(request.status)).length.toString()} />
+                <Metric icon={Sparkles} label="Decisions ready" value={requests.filter((request) => request.status === "quoted").length.toString()} />
+                <Metric icon={Users} label="Protected suppliers" value={new Set(requests.flatMap((request) => request.selectedSupplierIds)).size.toString()} />
+                <Metric icon={CircleDollarSign} label="Open target" value={money(requests.filter((request) => ["sent", "quoted"].includes(request.status)).reduce((sum, request) => sum + targetValue(request), 0))} />
             </div>
 
             <div className="flex flex-wrap gap-2">
-                {(["all", "sent", "quoted", "awarded"] as Filter[]).map((status) => (
-                    <button
-                        key={status}
-                        onClick={() => setFilter(status)}
-                        className={`rounded-xl px-3 py-2 text-xs font-semibold ${
-                            filter === status
-                                ? "bg-[#365845] text-white"
-                                : "border border-[#DDE5DC] bg-white text-[#666B66]"
-                        }`}
-                    >
-                        {status === "all"
-                            ? "All requests"
-                            : status === "sent"
-                              ? "Waiting for quotes"
-                              : status === "quoted"
-                                ? "Quotes ready"
-                                : "Awarded"}
-                    </button>
-                ))}
+                {(["all", "sent", "quoted", "awarded", "expired", "cancelled"] as Filter[]).map(
+                    (value) => (
+                        <button
+                            type="button"
+                            key={value}
+                            onClick={() => setFilter(value)}
+                            className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                                filter === value
+                                    ? "bg-[#365845] text-white"
+                                    : "border border-[#DDE5DC] bg-white text-[#667066]"
+                            }`}
+                        >
+                            {value === "all" ? "All" : value.replace("_", " ")}
+                        </button>
+                    )
+                )}
             </div>
 
-            <div className="space-y-4">
-                {filtered.map((request, index) => {
-                    const expanded = expandedId === request.id;
-                    const recommendation = bestQuote(request);
-                    return (
-                        <motion.article
-                            key={request.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.04 }}
-                            className="overflow-hidden rounded-3xl border border-[#DDE5DC] bg-white"
-                        >
-                            <div className="p-5">
-                                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                                    <div className="flex min-w-0 items-start gap-3">
-                                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[#EDF3EC] text-[#4F6F56]">
-                                            <Package size={17} />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <h2 className="text-sm font-bold text-[#2F312F]">
-                                                    {request.title}
-                                                </h2>
-                                                <StatusChip status={request.status} />
-                                                {request.priority === "urgent" && (
-                                                    <span className="rounded-full bg-[#FFF0E8] px-2 py-0.5 text-[9px] font-bold text-[#B75E28]">
-                                                        Urgent
-                                                    </span>
-                                                )}
+            {loading ? (
+                <div className="flex justify-center py-20 text-[#6F9277]">
+                    <LoaderCircle className="animate-spin" size={25} />
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {filtered.map((request) => {
+                        const expanded = request.id === expandedId;
+                        const ranked = [...request.quotes].sort((a, b) => b.score - a.score);
+                        return (
+                            <article key={request.id} className="overflow-hidden rounded-3xl border border-[#DDE5DC] bg-white">
+                                <div className="p-5">
+                                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                        <div className="flex min-w-0 items-start gap-3">
+                                            <div className="rounded-xl bg-[#EDF3EC] p-2.5 text-[#4F6F56]">
+                                                <Package size={17} />
                                             </div>
-                                            <p className="mt-1 text-[10px] text-[#8A918A]">
-                                                {request.id} · {request.lines.length} product
-                                                {request.lines.length === 1 ? "" : "s"} · needed by{" "}
-                                                {new Date(`${request.deliveryDate}T00:00:00`).toLocaleDateString(
-                                                    "en-SG",
-                                                    { day: "numeric", month: "short" }
-                                                )}
-                                            </p>
-                                            <div className="mt-3 flex flex-wrap gap-2">
-                                                {request.lines.map((line) => (
-                                                    <span
-                                                        key={line.id}
-                                                        className="rounded-lg bg-[#F4F7F3] px-2 py-1 text-[10px] text-[#666B66]"
-                                                    >
-                                                        {line.productName} · {line.quantity}
-                                                    </span>
-                                                ))}
+                                            <div>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h2 className="text-sm font-bold text-[#2F312F]">{request.title}</h2>
+                                                    <Status status={request.status} />
+                                                    {request.priority === "urgent" ? (
+                                                        <span className="rounded-full bg-[#FFF0E8] px-2 py-0.5 text-[9px] font-bold text-[#B75E28]">Urgent</span>
+                                                    ) : null}
+                                                </div>
+                                                <p className="mt-1 text-[10px] text-[#8A918A]">
+                                                    {request.reference} · {request.lines.length} lines · needed{" "}
+                                                    {new Date(`${request.deliveryDate}T12:00:00`).toLocaleDateString("en-SG", { dateStyle: "medium" })}
+                                                </p>
+                                                <div className="mt-3 flex flex-wrap gap-2">
+                                                    {request.lines.map((line) => (
+                                                        <span key={line.id} className="rounded-lg bg-[#F4F7F3] px-2 py-1 text-[10px] text-[#667066]">
+                                                            {line.productName} · {line.quantity}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-5 lg:justify-end">
-                                        <div>
-                                            <p className="text-[9px] text-[#8A918A]">Target value</p>
-                                            <p className="text-sm font-bold text-[#2F312F]">
-                                                {formatCurrency(requestValue(request))}
-                                            </p>
+                                        <div className="flex flex-wrap items-center gap-5">
+                                            <div>
+                                                <p className="text-[9px] text-[#8A918A]">Target</p>
+                                                <p className="text-sm font-bold text-[#2F312F]">{money(targetValue(request))}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] text-[#8A918A]">Quotes</p>
+                                                <p className="text-sm font-bold text-[#4F6F56]">{request.quotes.length} / {request.selectedSupplierIds.length}</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setExpandedId(expanded ? null : request.id)}
+                                                className="inline-flex items-center gap-1.5 rounded-xl border border-[#DDE5DC] px-3 py-2 text-xs font-semibold text-[#4F6F56]"
+                                            >
+                                                Details {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                            </button>
                                         </div>
-                                        <div>
-                                            <p className="text-[9px] text-[#8A918A]">Supplier quotes</p>
-                                            <p className="text-sm font-bold text-[#4F6F56]">
-                                                {request.quotes.length} / {request.selectedSupplierIds.length}
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() =>
-                                                setExpandedId(expanded ? null : request.id)
-                                            }
-                                            className="inline-flex items-center gap-1.5 rounded-xl border border-[#DDE5DC] px-3 py-2 text-xs font-semibold text-[#4F6F56]"
-                                        >
-                                            {request.quotes.length > 0 ? "Compare quotes" : "View request"}
-                                            {expanded ? (
-                                                <ChevronUp size={13} />
-                                            ) : (
-                                                <ChevronDown size={13} />
-                                            )}
-                                        </button>
                                     </div>
                                 </div>
-                            </div>
 
-                            {expanded && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: "auto" }}
-                                    className="border-t border-[#E6ECE4] bg-[#FAFBF9] p-5"
-                                >
-                                    {request.quotes.length === 0 ? (
-                                        <div className="flex flex-col gap-5 rounded-2xl border border-dashed border-[#C9D4C6] bg-white p-6 sm:flex-row sm:items-center sm:justify-between">
-                                            <div className="flex items-start gap-3">
+                                {expanded ? (
+                                    <div className="border-t border-[#E6ECE4] bg-[#FAFBF9] p-5">
+                                        {request.quotes.length === 0 ? (
+                                            <div className="flex items-start gap-3 rounded-2xl border border-dashed border-[#C9D4C6] bg-white p-5">
                                                 <Clock3 size={18} className="mt-0.5 text-[#6F9277]" />
                                                 <div>
-                                                    <p className="text-sm font-bold text-[#2F312F]">
-                                                        Waiting for supplier quotes
-                                                    </p>
+                                                    <p className="text-sm font-bold text-[#2F312F]">Waiting for supplier quotes</p>
                                                     <p className="mt-1 text-xs text-[#8A918A]">
-                                                        Sent to {request.selectedSupplierIds.length} suppliers.
-                                                        ReStock will rank offers as they arrive.
+                                                        {request.selectedSupplierIds.length} protected suppliers were notified. Deadline:{" "}
+                                                        {new Date(request.quoteDeadline).toLocaleString("en-SG", { dateStyle: "medium", timeStyle: "short" })}.
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2 text-[10px] font-semibold text-[#6F9277]">
-                                                <Send size={12} /> Request delivered
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {recommendation && request.status !== "awarded" && (
-                                                <div className="mb-4 flex items-start gap-3 rounded-2xl bg-[#EAF3E8] p-4">
-                                                    <Bot size={18} className="mt-0.5 text-[#4F6F56]" />
-                                                    <div>
-                                                        <p className="text-xs font-bold text-[#2F312F]">
-                                                            ReStock AI recommends{" "}
-                                                            {getSupplierAlias(
-                                                                recommendation.supplierId
-                                                            )}
-                                                        </p>
-                                                        <p className="mt-1 text-[10px] leading-5 text-[#666B66]">
-                                                            It has the strongest balance of price, delivery speed,
-                                                            payment terms, and supplier reliability.
-                                                        </p>
+                                        ) : (
+                                            <>
+                                                {request.status !== "awarded" ? (
+                                                    <div className="mb-4 flex items-start gap-3 rounded-2xl bg-[#EAF3E8] p-4">
+                                                        <Bot size={18} className="mt-0.5 text-[#4F6F56]" />
+                                                        <div>
+                                                            <p className="text-xs font-bold text-[#2F312F]">
+                                                                Best-value ranking: {ranked[0].supplierAlias}
+                                                            </p>
+                                                            <p className="mt-1 text-[10px] leading-5 text-[#667066]">
+                                                                Score combines target-price fit and delivery speed. Review the offer before awarding.
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                            <div className="grid gap-4 lg:grid-cols-3">
-                                                {[...request.quotes]
-                                                    .sort((a, b) => b.score - a.score)
-                                                    .map((quote, quoteIndex) => (
+                                                ) : null}
+                                                <div className="grid gap-4 lg:grid-cols-3">
+                                                    {ranked.map((quote, index) => (
                                                         <QuoteCard
                                                             key={quote.id}
                                                             quote={quote}
-                                                            supplierLabel={getSupplierAlias(
-                                                                quote.supplierId
-                                                            )}
-                                                            recommended={quoteIndex === 0}
+                                                            recommended={index === 0}
                                                             awarded={request.awardedQuoteId === quote.id}
-                                                            disabled={request.status === "awarded"}
-                                                            onSelect={() =>
-                                                                selectQuote(request.id, quote.id)
-                                                            }
+                                                            disabled={request.status === "awarded" || Boolean(awardingId)}
+                                                            working={awardingId === quote.id}
+                                                            onSelect={() => void selectQuote(request.id, quote.id)}
                                                         />
                                                     ))}
-                                            </div>
-                                        </>
-                                    )}
-                                </motion.div>
-                            )}
-                        </motion.article>
-                    );
-                })}
-            </div>
-
-            {filtered.length === 0 && (
-                <div className="rounded-3xl border border-dashed border-[#C9D4C6] bg-white py-16 text-center">
-                    <FileText size={28} className="mx-auto text-[#A9B4A6]" />
-                    <p className="mt-3 text-sm font-semibold text-[#2F312F]">No requests here</p>
-                    <Link
-                        href="/auction/shop/orders/new"
-                        className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56]"
-                    >
-                        Create an order <ArrowRight size={12} />
-                    </Link>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                ) : null}
+                            </article>
+                        );
+                    })}
                 </div>
             )}
+
+            {!loading && filtered.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-[#C9D4C6] bg-white py-16 text-center">
+                    <Send size={26} className="mx-auto text-[#A9B4A6]" />
+                    <p className="mt-3 text-sm font-semibold text-[#2F312F]">No requests in this view</p>
+                    <Link href="/auction/shop/orders/new" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56]">
+                        Create a request <ArrowRight size={12} />
+                    </Link>
+                </div>
+            ) : null}
         </div>
     );
 }
 
-function Metric({
-    icon: Icon,
-    label,
-    value,
-    note,
-}: {
-    icon: typeof FileText;
-    label: string;
-    value: string;
-    note: string;
-}) {
+function Metric({ icon: Icon, label, value }: { icon: typeof FileText; label: string; value: string }) {
     return (
         <div className="rounded-2xl border border-[#DDE5DC] bg-white p-4">
-            <Icon size={15} className="mb-3 text-[#6F9277]" />
-            <p className="text-xl font-bold text-[#2F312F]">{value}</p>
-            <p className="mt-0.5 text-xs font-semibold text-[#2F312F]">{label}</p>
-            <p className="text-[10px] text-[#8A918A]">{note}</p>
+            <Icon size={15} className="text-[#6F9277]" />
+            <p className="mt-3 text-xl font-bold text-[#2F312F]">{value}</p>
+            <p className="text-[10px] font-semibold text-[#7B817B]">{label}</p>
         </div>
     );
 }
 
-function StatusChip({ status }: { status: SourcingRequest["status"] }) {
+function Status({ status }: { status: SourcingRequest["status"] }) {
     const style =
         status === "awarded"
             ? "bg-[#E7F2E6] text-[#3F7048]"
             : status === "quoted"
               ? "bg-[#EDF0FA] text-[#4A5D92]"
-              : "bg-[#FFF5E6] text-[#94621B]";
-    return (
-        <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${style}`}>
-            {status === "sent" ? "Waiting for quotes" : status === "quoted" ? "Quotes ready" : "Awarded"}
-        </span>
-    );
+              : status === "sent"
+                ? "bg-[#FFF5E6] text-[#94621B]"
+                : "bg-[#F1F2F0] text-[#747A74]";
+    return <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold capitalize ${style}`}>{status}</span>;
 }
 
 function QuoteCard({
     quote,
-    supplierLabel,
     recommended,
     awarded,
     disabled,
+    working,
     onSelect,
 }: {
     quote: SupplierQuote;
-    supplierLabel: string;
     recommended: boolean;
     awarded: boolean;
     disabled: boolean;
+    working: boolean;
     onSelect: () => void;
 }) {
     return (
-        <div
-            className={`relative rounded-2xl border bg-white p-4 ${
-                recommended ? "border-[#6F9277] ring-1 ring-[#6F9277]/20" : "border-[#DDE5DC]"
-            }`}
-        >
-            {recommended && (
+        <div className={`relative rounded-2xl border bg-white p-4 ${recommended ? "border-[#6F9277]" : "border-[#DDE5DC]"}`}>
+            {recommended ? (
                 <span className="absolute -top-2 left-4 inline-flex items-center gap-1 rounded-full bg-[#4F6F56] px-2 py-1 text-[8px] font-bold text-white">
-                    <Sparkles size={8} /> AI best value
+                    <Sparkles size={8} /> Best value
                 </span>
-            )}
+            ) : null}
             <div className="mt-1 flex items-start justify-between gap-3">
                 <div>
-                    <p className="text-xs font-bold text-[#2F312F]">{supplierLabel}</p>
-                    <p className="mt-1 text-[10px] text-[#8A918A]">{quote.paymentTerms}</p>
+                    <p className="text-xs font-bold text-[#2F312F]">{quote.supplierAlias}</p>
+                    <p className="mt-1 text-[10px] text-[#8A918A]">{quote.reference} · {quote.paymentTerms}</p>
                 </div>
                 <div className="rounded-xl bg-[#EDF3EC] px-2.5 py-2 text-center">
-                    <p className="text-[8px] text-[#6F9277]">AI score</p>
+                    <p className="text-[8px] text-[#6F9277]">Value score</p>
                     <p className="text-sm font-bold text-[#4F6F56]">{quote.score}</p>
                 </div>
             </div>
-            <p className="mt-4 text-xl font-bold text-[#2F312F]">
-                {formatCurrency(quote.totalPrice)}
-            </p>
-            <div className="mt-3 space-y-2 text-[10px] text-[#666B66]">
-                <p className="flex items-center gap-2">
-                    <Truck size={11} className="text-[#6F9277]" />
-                    Delivery by{" "}
-                    {new Date(`${quote.deliveryDate}T00:00:00`).toLocaleDateString("en-SG", {
-                        day: "numeric",
-                        month: "short",
-                    })}
-                </p>
-                <p className="flex items-center gap-2">
-                    <Clock3 size={11} className="text-[#6F9277]" />
-                    {quote.deliveryDays} day lead time
-                </p>
+            <p className="mt-4 text-xl font-bold text-[#2F312F]">{money(quote.totalPrice)}</p>
+            <div className="mt-3 space-y-2 text-[10px] text-[#667066]">
+                <p className="flex items-center gap-2"><Truck size={11} /> Delivery {new Date(`${quote.deliveryDate}T12:00:00`).toLocaleDateString("en-SG", { dateStyle: "medium" })}</p>
+                <p className="flex items-center gap-2"><Clock3 size={11} /> {quote.deliveryDays} day lead time</p>
             </div>
             <button
+                type="button"
                 onClick={onSelect}
                 disabled={disabled}
-                className={`mt-4 w-full rounded-xl px-3 py-2.5 text-xs font-bold ${
+                className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold ${
                     awarded
                         ? "bg-[#E7F2E6] text-[#3F7048]"
                         : disabled
@@ -419,7 +321,8 @@ function QuoteCard({
                           : "bg-[#365845] text-white"
                 }`}
             >
-                {awarded ? "Awarded" : disabled ? "Not selected" : "Approve supplier"}
+                {working ? <LoaderCircle className="animate-spin" size={13} /> : null}
+                {awarded ? "Awarded" : working ? "Confirming…" : "Award quote"}
             </button>
         </div>
     );

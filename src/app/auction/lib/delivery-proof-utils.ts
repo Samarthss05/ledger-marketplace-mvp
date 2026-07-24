@@ -1,6 +1,9 @@
 export interface PreparedEvidencePhoto {
-    photoDataUrl: string;
+    previewUrl: string;
+    blob: Blob;
     fileName: string;
+    mimeType: "image/jpeg" | "image/png" | "image/webp";
+    fileSizeBytes: number;
 }
 
 function readFile(file: File) {
@@ -24,9 +27,19 @@ function loadImage(source: string) {
     });
 }
 
+function canvasBlob(canvas: HTMLCanvasElement) {
+    return new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+            (blob) => (blob ? resolve(blob) : reject(new Error("Unable to compress this image."))),
+            "image/jpeg",
+            0.78
+        );
+    });
+}
+
 export async function prepareEvidencePhoto(file: File): Promise<PreparedEvidencePhoto> {
-    if (!file.type.startsWith("image/")) {
-        throw new Error("Please select an image file.");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        throw new Error("Use a JPEG, PNG, or WebP image.");
     }
     if (file.size > 10 * 1024 * 1024) {
         throw new Error("Photo must be smaller than 10 MB.");
@@ -34,20 +47,29 @@ export async function prepareEvidencePhoto(file: File): Promise<PreparedEvidence
 
     const original = await readFile(file);
     const image = await loadImage(original);
-    const maximumDimension = 960;
+    const maximumDimension = 1600;
     const scale = Math.min(1, maximumDimension / Math.max(image.width, image.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(image.width * scale));
     canvas.height = Math.max(1, Math.round(image.height * scale));
     const context = canvas.getContext("2d");
 
+    let blob: Blob;
+    let mimeType: PreparedEvidencePhoto["mimeType"];
     if (!context) {
-        return { photoDataUrl: original, fileName: file.name };
+        blob = file;
+        mimeType = file.type as PreparedEvidencePhoto["mimeType"];
+    } else {
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        blob = await canvasBlob(canvas);
+        mimeType = "image/jpeg";
     }
 
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
     return {
-        photoDataUrl: canvas.toDataURL("image/jpeg", 0.72),
+        previewUrl: URL.createObjectURL(blob),
+        blob,
         fileName: file.name,
+        mimeType,
+        fileSizeBytes: blob.size,
     };
 }

@@ -1,305 +1,144 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import {
     ArrowRight,
-    Bot,
-    ClipboardCheck,
+    Camera,
+    CheckCircle2,
+    CircleDollarSign,
     FileText,
-    PackageCheck,
+    LoaderCircle,
+    Package,
     Plus,
-    Send,
-    Store,
+    ShieldCheck,
+    Sparkles,
     Truck,
 } from "lucide-react";
-import StatusBadge from "../components/status-badge";
-import {
-    isFulfillmentOrder,
-    useOrderWorkflowStore,
-} from "../lib/order-workflow-store";
-import { formatCurrency, orders } from "../lib/mock-data";
+import { useAuth } from "../components/auth-context";
+import { useOrderWorkflowStore } from "../lib/order-workflow-store";
+
+function money(value: number) {
+    return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" }).format(value);
+}
 
 export default function ShopDashboard() {
-    const { requests, createdOrders } = useOrderWorkflowStore();
-    const myOrders = [
-        ...createdOrders,
-        ...orders.filter(
-            (order) =>
-                order.shopName === "RK Minimart" &&
-                !createdOrders.some((created) => created.id === order.id)
-        ),
-    ];
-    const activeOrders = myOrders.filter(
-        (order) => order.status !== "delivered" && order.status !== "cancelled"
+    const { organization } = useAuth();
+    const { requests, createdOrders: orders, loading, error } = useOrderWorkflowStore();
+    const openRequests = requests.filter((request) => ["sent", "quoted"].includes(request.status));
+    const needsDecision = requests.filter((request) => request.status === "quoted");
+    const needsVerification = orders.filter(
+        (order) => order.verificationStatus === "awaiting_shop_verification"
     );
-    const openRequests = requests.filter((request) => request.status !== "awarded");
-    const quotesReady = requests.filter((request) => request.status === "quoted");
-    const committedValue = myOrders.reduce((total, order) => total + order.totalPrice, 0);
-
-    const stats = [
-        {
-            icon: FileText,
-            label: "Open requests",
-            value: openRequests.length.toString(),
-            note: "being sourced",
-        },
-        {
-            icon: Bot,
-            label: "Quotes ready",
-            value: quotesReady.length.toString(),
-            note: "AI-ranked for review",
-        },
-        {
-            icon: PackageCheck,
-            label: "Active orders",
-            value: activeOrders.length.toString(),
-            note: "in fulfillment",
-        },
-        {
-            icon: ClipboardCheck,
-            label: "Committed value",
-            value: formatCurrency(committedValue),
-            note: "across confirmed orders",
-        },
-    ];
+    const protectedValue = orders
+        .filter((order) => order.payoutStatus !== "released")
+        .reduce((sum, order) => sum + order.totalPrice, 0);
 
     return (
-        <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-            <motion.section
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#365845] via-[#4F6F56] to-[#719179] p-6 text-white"
-            >
-                <div
-                    className="absolute inset-0 opacity-[0.08]"
-                    style={{
-                        backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)",
-                        backgroundSize: "18px 18px",
-                    }}
-                />
-                <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto max-w-7xl space-y-7 px-4 py-7 sm:px-6 lg:px-8">
+            <section className="overflow-hidden rounded-[30px] bg-[#365845] p-6 text-white sm:p-8">
+                <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1">
-                            <Store size={11} />
-                            <span className="text-[9px] font-semibold tracking-[0.16em] uppercase">
-                                Retailer workspace
-                            </span>
-                        </div>
-                        <h1 className="text-2xl font-bold tracking-tight">Welcome back, RK Minimart</h1>
-                        <p className="mt-1 max-w-xl text-sm text-white/70">
-                            Create one order request, compare supplier quotes, then track delivery.
+                        <p className="text-[10px] font-bold tracking-[0.18em] text-[#CFE0D1] uppercase">
+                            {organization?.aliasCode} · Retailer workspace
+                        </p>
+                        <h1 className="mt-3 text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
+                            Good to see you, {organization?.displayName}.
+                        </h1>
+                        <p className="mt-3 max-w-2xl text-sm leading-6 text-[#E4ECE4]">
+                            Create one structured request, compare protected supplier offers, and
+                            verify the Ninja Van delivery before payout.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <Link
-                            href="/auction/shop/orders/new"
-                            className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#365845] shadow-sm"
-                        >
+                        <Link href="/auction/shop/orders/new" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#365845]">
                             <Plus size={14} /> Create order
                         </Link>
-                        <Link
-                            href="/auction/shop/requests"
-                            className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white"
-                        >
-                            <FileText size={14} /> View requests
+                        <Link href="/auction/shop/requests" className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-4 py-2.5 text-xs font-bold text-white">
+                            Review quotes <ArrowRight size={13} />
                         </Link>
                     </div>
-                </div>
-            </motion.section>
-
-            <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                {stats.map((stat, index) => (
-                    <motion.div
-                        key={stat.label}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.05 * index }}
-                        className="rounded-2xl border border-[#DDE5DC] bg-white p-4"
-                    >
-                        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-[#EDF3EC] text-[#4F6F56]">
-                            <stat.icon size={16} />
-                        </div>
-                        <p className="text-xl font-bold text-[#2F312F]">{stat.value}</p>
-                        <p className="mt-0.5 text-xs font-semibold text-[#2F312F]">{stat.label}</p>
-                        <p className="text-[10px] text-[#8A918A]">{stat.note}</p>
-                    </motion.div>
-                ))}
-            </section>
-
-            <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
-                <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <h2 className="text-base font-bold text-[#2F312F]">How ordering works</h2>
-                        <p className="mt-1 text-xs text-[#8A918A]">
-                            One clear process from stock requirement to delivered order.
-                        </p>
-                    </div>
-                    <Link
-                        href="/auction/shop/orders/new"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56]"
-                    >
-                        Start an order <ArrowRight size={12} />
-                    </Link>
-                </div>
-                <div className="grid gap-3 md:grid-cols-4">
-                    {[
-                        {
-                            icon: Plus,
-                            step: "01",
-                            title: "Build the order",
-                            note: "Add products, quantities, targets, and delivery needs.",
-                        },
-                        {
-                            icon: Bot,
-                            step: "02",
-                            title: "AI checks it",
-                            note: "Review pricing, timing, savings, and supplier coverage.",
-                        },
-                        {
-                            icon: Send,
-                            step: "03",
-                            title: "Compare quotes",
-                            note: "Invite suppliers and approve the best ranked offer.",
-                        },
-                        {
-                            icon: Truck,
-                            step: "04",
-                            title: "Track fulfillment",
-                            note: "Follow confirmation, shipping, and delivery in Orders.",
-                        },
-                    ].map((item) => (
-                        <div key={item.step} className="rounded-2xl bg-[#F4F7F3] p-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-[#4F6F56]">
-                                    <item.icon size={14} />
-                                </div>
-                                <span className="text-[9px] font-bold text-[#A0AAA0]">{item.step}</span>
-                            </div>
-                            <p className="mt-4 text-xs font-bold text-[#2F312F]">{item.title}</p>
-                            <p className="mt-1 text-[10px] leading-5 text-[#8A918A]">{item.note}</p>
-                        </div>
-                    ))}
                 </div>
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-                <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
-                    <div className="mb-4 flex items-center justify-between">
-                        <div>
-                            <h2 className="text-base font-bold text-[#2F312F]">Sourcing requests</h2>
-                            <p className="mt-0.5 text-xs text-[#8A918A]">
-                                Requests waiting for quotes or a supplier decision.
-                            </p>
-                        </div>
-                        <Link
-                            href="/auction/shop/requests"
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-[#4F6F56]"
-                        >
-                            View all <ArrowRight size={12} />
-                        </Link>
-                    </div>
-                    <div className="divide-y divide-[#EDF3EC]">
-                        {requests.slice(0, 4).map((request) => {
-                            const targetValue = request.lines.reduce(
-                                (total, line) => total + line.targetPrice * line.quantity,
-                                0
-                            );
-                            return (
-                                <div
-                                    key={request.id}
-                                    className="flex flex-col gap-3 py-4 first:pt-1 sm:flex-row sm:items-center sm:justify-between"
-                                >
-                                    <div className="min-w-0">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <p className="truncate text-sm font-semibold text-[#2F312F]">
-                                                {request.title}
-                                            </p>
-                                            <span
-                                                className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                                                    request.status === "quoted"
-                                                        ? "bg-[#EDF0FA] text-[#4A5D92]"
-                                                        : request.status === "awarded"
-                                                          ? "bg-[#E7F2E6] text-[#3F7048]"
-                                                          : "bg-[#FFF5E6] text-[#94621B]"
-                                                }`}
-                                            >
-                                                {request.status === "quoted"
-                                                    ? "Quotes ready"
-                                                    : request.status === "awarded"
-                                                      ? "Awarded"
-                                                      : "Waiting"}
-                                            </span>
-                                        </div>
-                                        <p className="mt-1 text-xs text-[#8A918A]">
-                                            {request.lines.length} product
-                                            {request.lines.length === 1 ? "" : "s"} ·{" "}
-                                            {request.quotes.length} quote
-                                            {request.quotes.length === 1 ? "" : "s"}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-4 sm:justify-end">
-                                        <div className="text-right">
-                                            <p className="text-[10px] text-[#8A918A]">Target value</p>
-                                            <p className="text-sm font-bold text-[#4F6F56]">
-                                                {formatCurrency(targetValue)}
-                                            </p>
-                                        </div>
-                                        <Link
-                                            href="/auction/shop/requests"
-                                            className="rounded-xl border border-[#DDE5DC] px-3 py-2 text-xs font-semibold text-[#4F6F56]"
-                                        >
-                                            Review
-                                        </Link>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </section>
+            {error ? <p role="alert" className="rounded-xl bg-[#FFF2EF] px-4 py-3 text-xs text-[#A33A2B]">{error}</p> : null}
 
-                <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
-                    <div className="mb-4 flex items-center justify-between">
-                        <div>
-                            <h2 className="text-base font-bold text-[#2F312F]">Recent orders</h2>
-                            <p className="mt-0.5 text-xs text-[#8A918A]">Confirmed supplier awards.</p>
-                        </div>
-                        <Link
-                            href="/auction/shop/orders"
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-[#4F6F56]"
-                        >
-                            View <ArrowRight size={12} />
-                        </Link>
-                    </div>
-                    <div className="space-y-3">
-                        {myOrders.slice(0, 3).map((order) => (
-                            <div key={order.id} className="rounded-2xl bg-[#F4F7F3] p-4">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                        <p className="truncate text-xs font-semibold text-[#2F312F]">
-                                            {order.productName}
-                                        </p>
-                                        <p className="mt-1 text-[10px] text-[#8A918A]">
-                                            {isFulfillmentOrder(order)
-                                                ? order.supplierAlias
-                                                : "Verified supplier"}
-                                        </p>
-                                    </div>
-                                    <StatusBadge status={order.status} />
-                                </div>
-                                <div className="mt-4 flex items-end justify-between">
-                                    <p className="text-xs text-[#666B66]">
-                                        {order.quantity.toLocaleString()} units
-                                    </p>
-                                    <p className="text-sm font-bold text-[#4F6F56]">
-                                        {formatCurrency(order.totalPrice)}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Metric icon={FileText} label="Open requests" value={openRequests.length.toString()} detail="Supplier outreach active" />
+                <Metric icon={Sparkles} label="Quotes to review" value={needsDecision.length.toString()} detail="Value-ranked decisions" />
+                <Metric icon={Camera} label="Deliveries to verify" value={needsVerification.length.toString()} detail="Photo confirmation due" />
+                <Metric icon={CircleDollarSign} label="Protected payout" value={money(protectedValue)} detail="Held until verification" />
             </div>
+
+            {loading ? (
+                <div className="flex justify-center py-16 text-[#6F9277]"><LoaderCircle className="animate-spin" size={24} /></div>
+            ) : (
+                <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+                    <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-base font-bold text-[#2F312F]">Current sourcing</h2>
+                                <p className="mt-1 text-[10px] text-[#8A918A]">Newest quote requests and decisions</p>
+                            </div>
+                            <Link href="/auction/shop/requests" className="text-xs font-bold text-[#4F6F56]">View all</Link>
+                        </div>
+                        <div className="mt-4 divide-y divide-[#EDF0EC]">
+                            {requests.slice(0, 5).map((request) => (
+                                <div key={request.id} className="flex items-center justify-between gap-4 py-4">
+                                    <div className="min-w-0">
+                                        <p className="truncate text-xs font-bold text-[#2F312F]">{request.title}</p>
+                                        <p className="mt-1 text-[10px] text-[#8A918A]">{request.reference} · {request.quotes.length} quotes</p>
+                                    </div>
+                                    <span className="rounded-full bg-[#F1F5F0] px-2.5 py-1 text-[9px] font-bold text-[#5B705F]">{request.status}</span>
+                                </div>
+                            ))}
+                            {requests.length === 0 ? <Empty text="No sourcing requests yet." /> : null}
+                        </div>
+                    </section>
+
+                    <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-base font-bold text-[#2F312F]">Fulfillment</h2>
+                                <p className="mt-1 text-[10px] text-[#8A918A]">Courier and evidence status</p>
+                            </div>
+                            <Link href="/auction/shop/orders" className="text-xs font-bold text-[#4F6F56]">View all</Link>
+                        </div>
+                        <div className="mt-4 space-y-3">
+                            {orders.slice(0, 4).map((order) => (
+                                <div key={order.id} className="rounded-2xl bg-[#F7F9F5] p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-xs font-bold text-[#2F312F]">{order.productName}</p>
+                                            <p className="mt-1 text-[10px] text-[#8A918A]">{order.reference} · {order.supplierAlias}</p>
+                                        </div>
+                                        {order.verificationStatus === "verified" ? <CheckCircle2 size={15} className="text-[#4F6F56]" /> : <Truck size={15} className="text-[#6F9277]" />}
+                                    </div>
+                                    <p className="mt-3 text-[10px] text-[#667066]">{order.courier.lastScan}</p>
+                                </div>
+                            ))}
+                            {orders.length === 0 ? <Empty text="Orders appear after you award a quote." /> : null}
+                        </div>
+                    </section>
+                </div>
+            )}
+
+            <section className="grid gap-4 sm:grid-cols-3">
+                <Trust icon={ShieldCheck} title="Anonymous counterparties" body="Suppliers only see your protected retailer alias." />
+                <Trust icon={Truck} title="Ninja Van chain of custody" body="Courier events connect supplier and retailer evidence." />
+                <Trust icon={Package} title="Payout protection" body="Funds stay held until verification or dispute resolution." />
+            </section>
         </div>
     );
+}
+
+function Metric({ icon: Icon, label, value, detail }: { icon: typeof FileText; label: string; value: string; detail: string }) {
+    return <div className="rounded-2xl border border-[#DDE5DC] bg-white p-4"><Icon size={15} className="text-[#6F9277]" /><p className="mt-3 text-xl font-bold text-[#2F312F]">{value}</p><p className="mt-0.5 text-xs font-semibold text-[#414641]">{label}</p><p className="mt-1 text-[9px] text-[#8A918A]">{detail}</p></div>;
+}
+
+function Trust({ icon: Icon, title, body }: { icon: typeof ShieldCheck; title: string; body: string }) {
+    return <div className="flex items-start gap-3 rounded-2xl border border-[#DDE5DC] bg-white p-4"><div className="rounded-xl bg-[#EDF3EC] p-2 text-[#4F6F56]"><Icon size={15} /></div><div><p className="text-xs font-bold text-[#2F312F]">{title}</p><p className="mt-1 text-[10px] leading-5 text-[#7B817B]">{body}</p></div></div>;
+}
+
+function Empty({ text }: { text: string }) {
+    return <p className="py-9 text-center text-xs text-[#8A918A]">{text}</p>;
 }
