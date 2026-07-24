@@ -369,7 +369,7 @@ export function useOrderWorkflowStore() {
                 supabase
                     .from("restock_sourcing_requests")
                     .select(
-                        "*, restock_request_lines(*), restock_request_suppliers(*), restock_quotes(*)"
+                        "*, restock_request_lines(*), restock_request_suppliers(*), restock_quotes!restock_quotes_request_id_fkey(*)"
                     )
                     .order("created_at", { ascending: false }),
                 supabase
