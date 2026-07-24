@@ -8,6 +8,7 @@ if (isGithubActions && process.env.GITHUB_REPOSITORY) {
 
 const nextConfig: NextConfig = {
   output: "export",
+  trailingSlash: true,
   basePath: repo,
   assetPrefix: repo,
   allowedDevOrigins: ["127.0.0.1", "localhost"],
