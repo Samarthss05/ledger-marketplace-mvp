@@ -29,7 +29,7 @@ function LoadingWorkspace() {
             <div className="text-center">
                 <LoaderCircle className="mx-auto animate-spin text-[#4F6F56]" size={28} />
                 <p className="mt-3 text-sm font-semibold text-[#4A514A]">
-                    Securing your workspace…
+                    Loading your account…
                 </p>
             </div>
         </div>
@@ -77,20 +77,19 @@ function AuthScreen() {
                             className="rounded-xl bg-white px-3 py-2"
                         />
                         <p className="mt-14 text-[11px] font-bold tracking-[0.18em] text-[#CFE0D1] uppercase">
-                            Production workspace
+                            Secure business account
                         </p>
                         <h1 className="mt-3 max-w-lg text-4xl font-bold tracking-[-0.04em] sm:text-5xl">
-                            Procurement with a verifiable chain of custody.
+                            One place to manage quotes, orders, and deliveries.
                         </h1>
                         <p className="mt-5 max-w-xl text-sm leading-7 text-[#E4ECE4]">
-                            Every quote, award, Ninja Van scan, delivery photo, and dispute action
-                            is stored against an authenticated business account.
+                            Sign in to manage your orders, delivery updates, and order photos.
                         </p>
                         <div className="mt-10 space-y-4">
                             {[
-                                "Business identities stay private between counterparties",
-                                "Evidence is stored privately with row-level access controls",
-                                "Payouts remain protected until delivery verification",
+                                "Shop and supplier names stay private",
+                                "Delivery photos are visible only to the businesses involved",
+                                "Orders stay pending until delivery is confirmed",
                             ].map((item) => (
                                 <div key={item} className="flex items-start gap-3">
                                     <CheckCircle2 className="mt-0.5 text-[#BCD3BE]" size={17} />
@@ -166,7 +165,7 @@ function AuthScreen() {
                                     ) : (
                                         <ArrowRight size={16} />
                                     )}
-                                    {mode === "sign-in" ? "Sign in securely" : "Create account"}
+                                    {mode === "sign-in" ? "Sign in" : "Create account"}
                                 </button>
                             </form>
 
@@ -185,7 +184,7 @@ function AuthScreen() {
                             </button>
                             <div className="mt-8 flex items-center justify-center gap-2 text-[10px] text-[#8A918A]">
                                 <ShieldCheck size={12} />
-                                Authenticated by Supabase · encrypted in transit
+                                Secure sign-in · encrypted connection
                             </div>
                         </div>
                     </section>
@@ -254,17 +253,17 @@ function OnboardingScreen() {
                         Business setup
                     </p>
                     <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">
-                        Create your verified workspace
+                        Set up your business profile
                     </h1>
                     <p className="mt-2 max-w-xl text-sm leading-6 text-[#707670]">
-                        Legal names are used internally for account verification. Counterparties only
-                        receive your protected ReStock alias.
+                        Your legal business name is kept private. Other businesses see only your
+                        ReStock ID.
                     </p>
 
                     <div className="mt-7 grid gap-3 sm:grid-cols-2">
                         {([
-                            ["retailer", Store, "Retailer", "Create RFQs and receive stock"],
-                            ["supplier", Truck, "Supplier", "Quote, fulfill, and submit proof"],
+                            ["retailer", Store, "Retailer", "Request quotes and receive orders"],
+                            ["supplier", Truck, "Supplier", "Send quotes and fulfil orders"],
                         ] as const).map(([type, Icon, label, detail]) => (
                             <button
                                 key={type}
@@ -299,7 +298,7 @@ function OnboardingScreen() {
                         </label>
                         <label>
                             <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
-                                Workspace display name
+                                Name shown in your dashboard
                             </span>
                             <input
                                 required
@@ -314,11 +313,11 @@ function OnboardingScreen() {
 
                     <div className="mt-7 border-t border-[#E8ECE7] pt-6">
                         <p className="text-xs font-bold text-[#2F312F]">
-                            Private logistics contact
+                            Pickup and delivery contact
                         </p>
                         <p className="mt-1 text-[10px] leading-5 text-[#7B817B]">
-                            ReStock and Ninja Van use these details for pickup or delivery.
-                            Counterparties never receive them.
+                            Used only by ReStock and Ninja Van. Shops and suppliers do not see each
+                            other&apos;s contact details.
                         </p>
                         <div className="mt-4 grid gap-4 sm:grid-cols-2">
                             <label>
@@ -337,7 +336,7 @@ function OnboardingScreen() {
                             </label>
                             <label>
                                 <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
-                                    Phone · international format
+                                    Phone number
                                 </span>
                                 <input
                                     required
@@ -391,7 +390,7 @@ function OnboardingScreen() {
                             </label>
                             <label className="sm:col-span-2">
                                 <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
-                                    Courier instructions
+                                    Pickup or delivery instructions
                                 </span>
                                 <textarea
                                     rows={2}
@@ -448,7 +447,7 @@ function OnboardingScreen() {
                         className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4F6F56] px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
                     >
                         {submitting ? <LoaderCircle className="animate-spin" size={16} /> : <ArrowRight size={16} />}
-                        Create secure workspace
+                        Create business profile
                     </button>
                 </form>
             </div>
@@ -474,7 +473,7 @@ export function WorkspaceGate({
             <div className="flex min-h-screen items-center justify-center bg-[#F7F9F5] px-4">
                 <div className="max-w-md rounded-3xl border border-[#E3D9D4] bg-white p-8 text-center">
                     <LockKeyhole className="mx-auto text-[#A45F48]" size={28} />
-                    <h1 className="mt-4 text-xl font-bold text-[#2F312F]">Workspace unavailable</h1>
+                    <h1 className="mt-4 text-xl font-bold text-[#2F312F]">Business account unavailable</h1>
                     <p className="mt-2 text-sm text-[#707670]">
                         This business account is {organization.status}. Contact ReStock support for review.
                     </p>
@@ -495,7 +494,8 @@ export function WorkspaceGate({
                         {organization.accountType === "retailer" ? "Retailer" : "Supplier"} account
                     </h1>
                     <p className="mt-2 text-sm text-[#707670]">
-                        Your authenticated organization cannot open the {requiredRole} workspace.
+                        This is a {organization.accountType} account. Sign out to use a different
+                        business account.
                     </p>
                     <button onClick={() => void signOut()} className="mt-5 text-sm font-semibold text-[#4F6F56]">
                         Sign out and use another account

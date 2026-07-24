@@ -15,6 +15,7 @@ import {
     Truck,
 } from "lucide-react";
 import { useAuth } from "../components/auth-context";
+import { retailerRequestStatus } from "../lib/display-copy";
 import { useOrderWorkflowStore } from "../lib/order-workflow-store";
 
 function money(value: number) {
@@ -45,8 +46,8 @@ export default function ShopDashboard() {
                             Good to see you, {organization?.displayName}.
                         </h1>
                         <p className="mt-3 max-w-2xl text-sm leading-6 text-[#E4ECE4]">
-                            Create one structured request, compare protected supplier offers, and
-                            verify the Ninja Van delivery before payout.
+                            Order stock, compare supplier quotes, and follow each delivery from
+                            pickup to your shop.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -63,10 +64,10 @@ export default function ShopDashboard() {
             {error ? <p role="alert" className="rounded-xl bg-[#FFF2EF] px-4 py-3 text-xs text-[#A33A2B]">{error}</p> : null}
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <Metric icon={FileText} label="Open requests" value={openRequests.length.toString()} detail="Supplier outreach active" />
-                <Metric icon={Sparkles} label="Quotes to review" value={needsDecision.length.toString()} detail="Value-ranked decisions" />
-                <Metric icon={Camera} label="Deliveries to verify" value={needsVerification.length.toString()} detail="Photo confirmation due" />
-                <Metric icon={CircleDollarSign} label="Protected payout" value={money(protectedValue)} detail="Held until verification" />
+                <Metric icon={FileText} label="Requests awaiting quotes" value={openRequests.length.toString()} detail="Waiting for suppliers" />
+                <Metric icon={Sparkles} label="Quotes received" value={needsDecision.length.toString()} detail="Ready for you" />
+                <Metric icon={Camera} label="Deliveries to confirm" value={needsVerification.length.toString()} detail="Check what arrived" />
+                <Metric icon={CircleDollarSign} label="Order value pending" value={money(protectedValue)} detail="Until delivery is confirmed" />
             </div>
 
             {loading ? (
@@ -76,8 +77,8 @@ export default function ShopDashboard() {
                     <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h2 className="text-base font-bold text-[#2F312F]">Current sourcing</h2>
-                                <p className="mt-1 text-[10px] text-[#8A918A]">Newest quote requests and decisions</p>
+                                <h2 className="text-base font-bold text-[#2F312F]">Quote requests</h2>
+                                <p className="mt-1 text-[10px] text-[#8A918A]">Recent requests and supplier responses</p>
                             </div>
                             <Link href="/auction/shop/requests" className="text-xs font-bold text-[#4F6F56]">View all</Link>
                         </div>
@@ -88,18 +89,18 @@ export default function ShopDashboard() {
                                         <p className="truncate text-xs font-bold text-[#2F312F]">{request.title}</p>
                                         <p className="mt-1 text-[10px] text-[#8A918A]">{request.reference} · {request.quotes.length} quotes</p>
                                     </div>
-                                    <span className="rounded-full bg-[#F1F5F0] px-2.5 py-1 text-[9px] font-bold text-[#5B705F]">{request.status}</span>
+                                    <span className="rounded-full bg-[#F1F5F0] px-2.5 py-1 text-[9px] font-bold text-[#5B705F]">{retailerRequestStatus(request.status)}</span>
                                 </div>
                             ))}
-                            {requests.length === 0 ? <Empty text="No sourcing requests yet." /> : null}
+                            {requests.length === 0 ? <Empty text="No quote requests yet." /> : null}
                         </div>
                     </section>
 
                     <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h2 className="text-base font-bold text-[#2F312F]">Fulfillment</h2>
-                                <p className="mt-1 text-[10px] text-[#8A918A]">Courier and evidence status</p>
+                                <h2 className="text-base font-bold text-[#2F312F]">Deliveries</h2>
+                                <p className="mt-1 text-[10px] text-[#8A918A]">Latest Ninja Van updates</p>
                             </div>
                             <Link href="/auction/shop/orders" className="text-xs font-bold text-[#4F6F56]">View all</Link>
                         </div>
@@ -116,16 +117,16 @@ export default function ShopDashboard() {
                                     <p className="mt-3 text-[10px] text-[#667066]">{order.courier.lastScan}</p>
                                 </div>
                             ))}
-                            {orders.length === 0 ? <Empty text="Orders appear after you award a quote." /> : null}
+                            {orders.length === 0 ? <Empty text="Orders appear after you choose a supplier quote." /> : null}
                         </div>
                     </section>
                 </div>
             )}
 
             <section className="grid gap-4 sm:grid-cols-3">
-                <Trust icon={ShieldCheck} title="Anonymous counterparties" body="Suppliers only see your protected retailer alias." />
-                <Trust icon={Truck} title="Ninja Van chain of custody" body="Courier events connect supplier and retailer evidence." />
-                <Trust icon={Package} title="Payout protection" body="Funds stay held until verification or dispute resolution." />
+                <Trust icon={ShieldCheck} title="Your business details stay private" body="Suppliers see only your ReStock ID—not your shop name or contact details." />
+                <Trust icon={Truck} title="Delivery tracking with Ninja Van" body="Follow pickup and delivery updates from dispatch to your door." />
+                <Trust icon={Package} title="Confirm before payment" body="Supplier payment is released only after you confirm the order arrived correctly." />
             </section>
         </div>
     );

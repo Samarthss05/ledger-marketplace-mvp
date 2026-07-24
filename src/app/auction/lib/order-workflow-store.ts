@@ -341,7 +341,7 @@ async function uploadEvidence(
             contentType: photo.mimeType,
             upsert: false,
         });
-    if (error) throw new Error(`Evidence upload failed: ${error.message}`);
+    if (error) throw new Error(`Photo upload failed: ${error.message}`);
     return storagePath;
 }
 
@@ -427,7 +427,7 @@ export function useOrderWorkflowStore() {
                 }))
             );
         } catch (cause) {
-            setError(cause instanceof Error ? cause.message : "Unable to load workspace data.");
+            setError(cause instanceof Error ? cause.message : "We could not load your account data. Please try again.");
         } finally {
             setLoading(false);
         }

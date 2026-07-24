@@ -152,7 +152,7 @@ async function getMembership(admin: AdminClient, userId: string) {
     ? data.organization[0]
     : data.organization;
   if (!organization || organization.status !== "active") {
-    throw new Error("This business workspace is not active.");
+    throw new Error("This business account is not active.");
   }
   return {
     organizationId: data.organization_id as string,
@@ -339,7 +339,7 @@ async function createRequest(
       notifyOrganization(admin, supplier.organization_id, {
         type: "request_received",
         title: "New quote request",
-        body: `${requestReference} is ready for review.`,
+        body: `${requestReference} is ready for your quote.`,
         linkPath: "/auction/supplier/crm",
       })
     )
@@ -420,8 +420,8 @@ async function submitQuote(
 
   await notifyOrganization(admin, request.retailer_org_id, {
     type: "quote_received",
-    title: "Supplier quote received",
-    body: `${membership.aliasCode} submitted an offer for ${savedQuote.reference}.`,
+    title: "New supplier quote",
+    body: `${membership.aliasCode} sent a quote for ${savedQuote.reference}.`,
     linkPath: "/auction/shop/requests",
   });
   await audit(admin, membership.organizationId, userId, "restock_quotes", savedQuote.id, "INSERT", {
@@ -440,7 +440,7 @@ async function awardQuote(
 ) {
   const membership = await getMembership(admin, userId);
   if (membership.accountType !== "retailer") {
-    return response(req, { error: "Only retailer accounts can award quotes." }, 403);
+    return response(req, { error: "Only retailer accounts can select a quote." }, 403);
   }
 
   const { data: request, error: requestError } = await admin
@@ -451,7 +451,7 @@ async function awardQuote(
     .single();
   if (requestError) throw requestError;
   if (request.status === "awarded") {
-    return response(req, { error: "This request has already been awarded." }, 409);
+    return response(req, { error: "A supplier has already been selected for this request." }, 409);
   }
 
   const { data: quote, error: quoteError } = await admin
@@ -515,15 +515,15 @@ async function awardQuote(
       order_id: orderId,
       actor_type: "system",
       event_type: "order_confirmed",
-      title: "Order confirmed",
-      detail: "Counterparty identities remain protected. Payout is held until verification.",
+      title: "Order created",
+      detail: "The supplier is preparing the order for Ninja Van pickup.",
     },
     {
       order_id: orderId,
       actor_type: "ninja_van",
       event_type: "booking_pending",
-      title: "Ninja Van booking requested",
-      detail: "The protected pickup and delivery route is awaiting courier confirmation.",
+      title: "Ninja Van pickup requested",
+      detail: "Waiting for Ninja Van to confirm the pickup.",
     },
   ]);
   await admin
@@ -540,8 +540,8 @@ async function awardQuote(
 
   await notifyOrganization(admin, quote.supplier_org_id, {
     type: "quote_awarded",
-    title: "Quote awarded",
-    body: `${orderReference} is confirmed and awaiting handoff proof.`,
+    title: "Your quote was selected",
+    body: `${orderReference} is ready for you to prepare and photograph before pickup.`,
     linkPath: "/auction/supplier/operations",
   });
   await audit(admin, membership.organizationId, userId, "restock_orders", orderId, "INSERT", {
@@ -560,10 +560,10 @@ async function submitSupplierProof(
 ) {
   const membership = await getMembership(admin, userId);
   if (membership.accountType !== "supplier") {
-    return response(req, { error: "Only the assigned supplier can submit handoff proof." }, 403);
+    return response(req, { error: "Only the assigned supplier can add the dispatch photo." }, 403);
   }
   if (!input.storagePath.startsWith(`${input.orderId}/supplier/`)) {
-    return response(req, { error: "Invalid evidence path." }, 400);
+    return response(req, { error: "The uploaded photo could not be linked to this order." }, 400);
   }
 
   const { data: order, error: orderError } = await admin
@@ -574,7 +574,7 @@ async function submitSupplierProof(
     .single();
   if (orderError) throw orderError;
   if (!["awaiting_supplier_proof", "awaiting_courier_pickup"].includes(order.verification_status)) {
-    return response(req, { error: "Supplier proof is already locked for this order." }, 409);
+    return response(req, { error: "A dispatch photo has already been submitted for this order." }, 409);
   }
 
   const { error: proofError } = await admin.from("restock_delivery_proofs").insert({
@@ -591,7 +591,7 @@ async function submitSupplierProof(
   });
   if (proofError) {
     if (proofError.code === "23505") {
-      return response(req, { error: "Supplier proof has already been submitted." }, 409);
+      return response(req, { error: "A dispatch photo has already been submitted." }, 409);
     }
     throw proofError;
   }
@@ -607,12 +607,12 @@ async function submitSupplierProof(
     order_id: order.id,
     actor_type: "supplier",
     event_type: "supplier_proof_submitted",
-    title: "Sealed handoff proof recorded",
-    detail: `${input.quantity} units photographed before Ninja Van collection.`,
+    title: "Dispatch photo added",
+    detail: `${input.quantity} units were photographed before Ninja Van pickup.`,
   });
   await notifyOrganization(admin, order.buyer_org_id, {
     type: "supplier_proof_recorded",
-    title: "Supplier handoff proof ready",
+    title: "Supplier dispatch photo added",
     body: `${order.reference} is awaiting Ninja Van pickup.`,
     linkPath: "/auction/shop/orders",
   });
@@ -633,21 +633,21 @@ function automatedAssessment(
   const quantityDifference = supplierQuantity - retailerQuantity;
   const issue =
     outcome === "damaged"
-      ? "Retailer evidence reports visible damage."
+      ? "The retailer reported damaged items."
       : outcome === "wrong_items"
-        ? "Retailer evidence reports a product mismatch."
+        ? "The retailer reported that different items arrived."
         : outcome === "short"
-          ? "Retailer evidence reports a quantity shortage."
-          : "Retailer requested manual review.";
+          ? "The retailer reported missing units."
+          : "The retailer asked for a review.";
   const quantity =
     quantityDifference === 0
-      ? "Both parties recorded the same quantity."
-      : `Supplier proof records ${supplierQuantity} units and retailer proof records ${retailerQuantity}, a difference of ${Math.abs(quantityDifference)} units.`;
+      ? "Both photos record the same quantity."
+      : `The supplier recorded ${supplierQuantity} units and the retailer recorded ${retailerQuantity}, a difference of ${Math.abs(quantityDifference)} units.`;
   const courier =
     courierStatus === "delivered"
-      ? "Ninja Van recorded a completed delivery scan."
-      : "A final Ninja Van delivery scan is missing.";
-  return `${issue} ${quantity} ${courier} Payout remains on hold pending human review.`;
+      ? "Ninja Van marked the order delivered."
+      : "A final Ninja Van delivery update is missing.";
+  return `${issue} ${quantity} ${courier} The order remains under review until a reviewer makes a decision.`;
 }
 
 async function verifyDelivery(
@@ -658,10 +658,10 @@ async function verifyDelivery(
 ) {
   const membership = await getMembership(admin, userId);
   if (membership.accountType !== "retailer") {
-    return response(req, { error: "Only the buying retailer can verify delivery." }, 403);
+    return response(req, { error: "Only the retailer receiving this order can confirm delivery." }, 403);
   }
   if (!input.storagePath.startsWith(`${input.orderId}/retailer/`)) {
-    return response(req, { error: "Invalid evidence path." }, 400);
+    return response(req, { error: "The uploaded photo could not be linked to this order." }, 400);
   }
 
   const { data: order, error: orderError } = await admin
@@ -672,14 +672,14 @@ async function verifyDelivery(
     .single();
   if (orderError) throw orderError;
   if (order.courier_status !== "delivered" || order.verification_status !== "awaiting_shop_verification") {
-    return response(req, { error: "This order is not ready for retailer verification." }, 409);
+    return response(req, { error: "This order is not ready to be confirmed yet." }, 409);
   }
 
   const supplierProof = order.restock_delivery_proofs.find(
     (proof: { actor_type: string }) => proof.actor_type === "supplier"
   );
   if (!supplierProof) {
-    return response(req, { error: "Supplier handoff proof is missing." }, 409);
+    return response(req, { error: "The supplier dispatch photo is missing." }, 409);
   }
 
   const accepted = input.outcome === "accepted";
@@ -697,7 +697,7 @@ async function verifyDelivery(
   });
   if (proofError) {
     if (proofError.code === "23505") {
-      return response(req, { error: "Retailer proof has already been submitted." }, 409);
+      return response(req, { error: "A delivery photo has already been submitted." }, 409);
     }
     throw proofError;
   }
@@ -736,26 +736,26 @@ async function verifyDelivery(
       order_id: order.id,
       actor_type: "retailer",
       event_type: accepted ? "delivery_verified" : "delivery_issue_reported",
-      title: accepted ? "Delivery verified by retailer" : "Delivery discrepancy reported",
+      title: accepted ? "Delivery confirmed by retailer" : "Delivery issue reported",
       detail: accepted
-        ? `${input.quantity} units photo-confirmed in good condition.`
+        ? `${input.quantity} units confirmed in good condition.`
         : `${input.quantity} units recorded with issue: ${input.outcome.replace("_", " ")}.`,
     },
     {
       order_id: order.id,
       actor_type: "system",
       event_type: accepted ? "payout_released" : "payout_held",
-      title: accepted ? "Verification complete" : "Evidence review opened",
+      title: accepted ? "Order completed" : "Independent review opened",
       detail: accepted
-        ? "Supplier proof, Ninja Van scan, and retailer proof agree. Payout released."
-        : `${disputeReference} created. Payout is held for independent review.`,
+        ? "The retailer confirmed the order arrived correctly. Payment status was updated."
+        : `${disputeReference} was created. The order will remain open until a reviewer decides.`,
     },
   ]);
   await notifyOrganization(admin, order.supplier_org_id, {
     type: accepted ? "delivery_verified" : "dispute_opened",
-    title: accepted ? "Delivery verified" : "Evidence review opened",
+    title: accepted ? "Delivery confirmed" : "Delivery issue reported",
     body: accepted
-      ? `${order.reference} was accepted and payout released.`
+      ? `${order.reference} was accepted. Payment status has been updated.`
       : `${disputeReference} was opened for ${order.reference}.`,
     linkPath: "/auction/supplier/operations",
   });
@@ -871,7 +871,7 @@ async function resolveDispute(
     order_id: order.id,
     actor_type: "reviewer",
     event_type: buyerRefund ? "dispute_refunded" : "dispute_supplier_upheld",
-    title: buyerRefund ? "Independent review: buyer refunded" : "Independent review: supplier upheld",
+    title: buyerRefund ? "Review completed: retailer refunded" : "Review completed: supplier paid",
     detail: input.note,
   });
   await admin.from("restock_dispute_messages").insert({
@@ -883,14 +883,14 @@ async function resolveDispute(
   await Promise.all([
     notifyOrganization(admin, order.buyer_org_id, {
       type: "dispute_resolved",
-      title: "Evidence review resolved",
+      title: "Delivery review completed",
       body: `${dispute.reference} has been resolved. Open the order for the decision record.`,
       linkPath: "/auction/shop/orders",
     }),
     notifyOrganization(admin, order.supplier_org_id, {
       type: "dispute_resolved",
-      title: "Evidence review resolved",
-      body: `${dispute.reference} has been resolved. Open fulfillment for the decision record.`,
+      title: "Delivery review completed",
+      body: `${dispute.reference} has been resolved. Open the order for the final decision.`,
       linkPath: "/auction/supplier/operations",
     }),
   ]);

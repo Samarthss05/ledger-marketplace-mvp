@@ -10,8 +10,8 @@ import { WorkspaceGate } from "../components/workspace-gate";
 
 const supplierNav = [
     { label: "Dashboard", href: "/auction/supplier", icon: LayoutDashboard },
-    { label: "RFQs & quotes", href: "/auction/supplier/crm", icon: Users },
-    { label: "Fulfillment", href: "/auction/supplier/operations", icon: Package },
+    { label: "Quote requests", href: "/auction/supplier/crm", icon: Users },
+    { label: "Deliveries", href: "/auction/supplier/operations", icon: Package },
 ];
 
 function SupplierShell({ children }: { children: React.ReactNode }) {

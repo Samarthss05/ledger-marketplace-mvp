@@ -3,10 +3,10 @@ import { BrandLockup } from "@/components/brand-lockup";
 
 const footerLinks = {
     Platform: [
-        { label: "Retailer workspace", href: "/auction/shop" },
-        { label: "Supplier workspace", href: "/auction/supplier" },
-        { label: "Procurement platform", href: "/auction" },
-        { label: "Order fulfillment", href: "/auction/supplier/operations" },
+        { label: "Retailer dashboard", href: "/auction/shop" },
+        { label: "Supplier dashboard", href: "/auction/supplier" },
+        { label: "Quote requests", href: "/auction/shop/requests" },
+        { label: "Deliveries", href: "/auction/supplier/operations" },
     ],
     Company: [
         { label: "About", href: "#" },
@@ -33,7 +33,7 @@ export default function Footer() {
                             <BrandLockup size="lg" />
                         </div>
                         <p className="text-sm text-muted leading-relaxed mb-6 max-w-xs">
-                            Smarter retail procurement for independent shops and suppliers across Southeast Asia.
+                            Order stock, compare quotes, and track deliveries in one place.
                         </p>
                         <div className="flex gap-3">
                             {[Twitter, Linkedin, Github].map((Icon, i) => (

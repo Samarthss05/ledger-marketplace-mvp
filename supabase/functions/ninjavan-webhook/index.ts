@@ -183,10 +183,10 @@ Deno.serve(async (req: Request) => {
         : state.courierStatus === "exception"
           ? "delivery_exception"
           : "tracking_update",
-    title: `Ninja Van · ${payload.status}`,
+    title: `Ninja Van update: ${payload.status}`,
     detail:
       payload.delivery_exception?.failure_reason ??
-      `${payload.event ?? payload.status} recorded by Ninja Van.`,
+      `${payload.event ?? payload.status}.`,
     source_reference: eventKey,
     occurred_at: new Date(payload.timestamp).toISOString(),
   });

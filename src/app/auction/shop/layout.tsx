@@ -11,8 +11,8 @@ import { WorkspaceGate } from "../components/workspace-gate";
 const shopNav = [
     { label: "Dashboard", href: "/auction/shop", icon: Store },
     { label: "Create order", href: "/auction/shop/orders/new", icon: PlusCircle },
-    { label: "Requests", href: "/auction/shop/requests", icon: FileText },
-    { label: "Orders", href: "/auction/shop/orders", icon: ClipboardList },
+    { label: "Quotes", href: "/auction/shop/requests", icon: FileText },
+    { label: "Deliveries", href: "/auction/shop/orders", icon: ClipboardList },
 ];
 
 function ShopShell({ children }: { children: React.ReactNode }) {

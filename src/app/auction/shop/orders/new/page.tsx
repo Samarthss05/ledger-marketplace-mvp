@@ -26,7 +26,7 @@ import {
 } from "../../../lib/order-workflow-store";
 import { products, type Product } from "../../../lib/products-db";
 
-const steps = ["Order lines", "Smart review", "Suppliers", "Confirm"];
+const steps = ["Order details", "Review", "Choose suppliers", "Send request"];
 
 function money(value: number) {
     return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" }).format(value);
@@ -130,7 +130,7 @@ export default function CreateOrderPage() {
             });
             router.push("/auction/shop/requests");
         } catch (cause) {
-            setFormError(cause instanceof Error ? cause.message : "Unable to create request.");
+            setFormError(cause instanceof Error ? cause.message : "We could not create this request. Please try again.");
         } finally {
             setSubmitting(false);
         }
@@ -147,13 +147,14 @@ export default function CreateOrderPage() {
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p className="text-[10px] font-bold tracking-[0.17em] text-[#6F9277] uppercase">
-                        Guided order creation
+                        New order
                     </p>
                     <h1 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">
-                        Create a sourcing request
+                        Request quotes for a new order
                     </h1>
                     <p className="mt-2 text-sm text-[#707670]">
-                        Build the basket, review pricing guidance, then invite anonymous suppliers.
+                        Add the products you need, review your budget, and choose which suppliers
+                        can quote.
                     </p>
                 </div>
                 <p className="text-xs font-semibold text-[#6F9277]">
@@ -185,20 +186,20 @@ export default function CreateOrderPage() {
                         <div className="grid gap-4 sm:grid-cols-2">
                             <label className="sm:col-span-2">
                                 <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
-                                    Request title
+                                    Order name
                                 </span>
                                 <input
                                     required
                                     maxLength={140}
                                     value={title}
                                     onChange={(event) => setTitle(event.target.value)}
-                                    placeholder="e.g. August beverage replenishment"
+                                    placeholder="e.g. August drinks order"
                                     className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
                                 />
                             </label>
                             <label>
                                 <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
-                                    Needed by
+                                    Delivery date
                                 </span>
                                 <div className="relative">
                                     <Calendar
@@ -216,7 +217,7 @@ export default function CreateOrderPage() {
                             </label>
                             <label>
                                 <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
-                                    Priority
+                                    Quote deadline
                                 </span>
                                 <select
                                     value={priority}
@@ -225,8 +226,8 @@ export default function CreateOrderPage() {
                                     }
                                     className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
                                 >
-                                    <option value="standard">Standard · 48-hour quote window</option>
-                                    <option value="urgent">Urgent · 12-hour quote window</option>
+                                    <option value="standard">Standard · suppliers have 48 hours</option>
+                                    <option value="urgent">Urgent · suppliers have 12 hours</option>
                                 </select>
                             </label>
                         </div>
@@ -304,7 +305,7 @@ export default function CreateOrderPage() {
                                     </label>
                                     <label>
                                         <span className="mb-1 block text-[10px] text-[#777E77]">
-                                            Target / unit
+                                            Budget per unit
                                         </span>
                                         <input
                                             type="number"
@@ -366,22 +367,22 @@ export default function CreateOrderPage() {
                                 <Bot size={19} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-[#2F312F]">Smart order review</h2>
+                                <h2 className="text-lg font-bold text-[#2F312F]">Review your order</h2>
                                 <p className="mt-1 text-xs leading-5 text-[#707670]">
-                                    ReStock checks pricing, timing, and basket structure before the RFQ
-                                    is sent. Guidance is deterministic and remains reviewable by you.
+                                    Check your budget, delivery date, and receiving instructions
+                                    before sending.
                                 </p>
                             </div>
                         </div>
                         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                            <Insight label="Target basket" value={money(targetTotal)} detail="Your supplier ceiling" />
-                            <Insight label="Retail benchmark" value={money(marketTotal)} detail="Current catalogue value" />
-                            <Insight label="Potential saving" value={money(estimatedSaving)} detail="Before delivery costs" />
+                            <Insight label="Your budget" value={money(targetTotal)} detail="Maximum you want to spend" />
+                            <Insight label="Retail price estimate" value={money(marketTotal)} detail="Based on catalogue prices" />
+                            <Insight label="Estimated saving" value={money(estimatedSaving)} detail="Compared with retail prices" />
                         </div>
                         <div className="mt-5 space-y-3">
                             <ReviewRow
                                 ok={estimatedSaving > 0}
-                                title="Pricing check"
+                                title="Budget check"
                                 detail={
                                     estimatedSaving > 0
                                         ? `Targets are ${Math.round((estimatedSaving / marketTotal) * 100)}% below retail benchmarks.`
@@ -390,7 +391,7 @@ export default function CreateOrderPage() {
                             />
                             <ReviewRow
                                 ok={new Date(deliveryDate).getTime() - Date.now() >= 3 * 86_400_000}
-                                title="Delivery feasibility"
+                                title="Delivery timing"
                                 detail={
                                     priority === "urgent"
                                         ? "Urgent requests close after 12 hours, reducing response time."
@@ -399,7 +400,7 @@ export default function CreateOrderPage() {
                             />
                             <ReviewRow
                                 ok={notes.trim().length > 0}
-                                title="Receiving clarity"
+                                title="Delivery instructions"
                                 detail={
                                     notes.trim()
                                         ? "Receiving instructions are included."
@@ -415,10 +416,11 @@ export default function CreateOrderPage() {
                         <div className="flex items-start justify-between gap-4">
                             <div>
                                 <h2 className="text-lg font-bold text-[#2F312F]">
-                                    Invite protected suppliers
+                                    Choose suppliers to invite
                                 </h2>
                                 <p className="mt-1 text-xs leading-5 text-[#707670]">
-                                    Only supplier aliases and verified performance data are shown.
+                                    Supplier names are private. Choose using their ReStock ID,
+                                    product match, and delivery record.
                                 </p>
                             </div>
                             <Users size={20} className="text-[#6F9277]" />
@@ -476,16 +478,16 @@ export default function CreateOrderPage() {
                                             </div>
                                             <div className="mt-4 flex gap-4 text-[10px] text-[#667066]">
                                                 <span>
-                                                    Match <b className="text-[#2F312F]">{score}</b>
+                                                    Product match <b className="text-[#2F312F]">{score}</b>
                                                 </span>
                                                 <span>
-                                                    On time{" "}
+                                                    Delivered on time{" "}
                                                     <b className="text-[#2F312F]">
                                                         {supplier.onTimeRate || "New"}{supplier.onTimeRate ? "%" : ""}
                                                     </b>
                                                 </span>
                                                 <span>
-                                                    Orders{" "}
+                                                    Completed orders{" "}
                                                     <b className="text-[#2F312F]">{supplier.completedOrders}</b>
                                                 </span>
                                             </div>
@@ -497,10 +499,10 @@ export default function CreateOrderPage() {
                             <div className="mt-6 rounded-2xl border border-dashed border-[#C9D4C6] p-8 text-center">
                                 <CircleAlert size={22} className="mx-auto text-[#A45F48]" />
                                 <p className="mt-3 text-sm font-semibold text-[#2F312F]">
-                                    No suppliers are accepting requests
+                                    No suppliers are available right now
                                 </p>
                                 <p className="mt-1 text-xs text-[#7B817B]">
-                                    Your draft is safe. Try again when a supplier completes onboarding.
+                                    Please try again later or contact ReStock support.
                                 </p>
                             </div>
                         )}
@@ -509,22 +511,22 @@ export default function CreateOrderPage() {
 
                 {step === 3 ? (
                     <div>
-                        <h2 className="text-lg font-bold text-[#2F312F]">Confirm and send</h2>
+                        <h2 className="text-lg font-bold text-[#2F312F]">Review and send</h2>
                         <p className="mt-1 text-xs text-[#707670]">
-                            This creates an auditable request and notifies only the selected suppliers.
+                            Only the suppliers you choose will receive this request.
                         </p>
                         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                            <Summary label="Request" value={title} />
-                            <Summary label="Needed by" value={new Date(`${deliveryDate}T12:00:00`).toLocaleDateString("en-SG", { dateStyle: "medium" })} />
-                            <Summary label="Products" value={`${lines.length} lines · ${lines.reduce((sum, line) => sum + line.quantity, 0)} units`} />
-                            <Summary label="Target value" value={money(targetTotal)} />
-                            <Summary label="Suppliers invited" value={`${selectedSupplierIds.length} protected aliases`} />
+                            <Summary label="Order name" value={title} />
+                            <Summary label="Delivery date" value={new Date(`${deliveryDate}T12:00:00`).toLocaleDateString("en-SG", { dateStyle: "medium" })} />
+                            <Summary label="Items" value={`${lines.length} products · ${lines.reduce((sum, line) => sum + line.quantity, 0)} units`} />
+                            <Summary label="Budget" value={money(targetTotal)} />
+                            <Summary label="Suppliers invited" value={`${selectedSupplierIds.length} suppliers`} />
                             <Summary label="Quote window" value={priority === "urgent" ? "12 hours" : "48 hours"} />
                         </div>
                         <div className="mt-5 rounded-2xl bg-[#F3F7F2] p-4 text-xs leading-5 text-[#5E685E]">
-                            The retailer and supplier legal names are never shown to each other.
-                            ReStock records the RFQ, quote decision, Ninja Van scans, and photo
-                            verification under protected aliases.
+                            Your shop name and suppliers&apos; company names stay private. Both
+                            sides use ReStock IDs while quotes, delivery updates, and photos are
+                            recorded with the order.
                         </div>
                     </div>
                 ) : null}
@@ -565,7 +567,7 @@ export default function CreateOrderPage() {
                             ) : (
                                 <Send size={14} />
                             )}
-                            Send quote request
+                            Send request to suppliers
                         </button>
                     )}
                 </div>

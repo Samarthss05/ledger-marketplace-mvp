@@ -19,6 +19,7 @@ import {
     Truck,
     Users,
 } from "lucide-react";
+import { retailerRequestStatus } from "../../lib/display-copy";
 import {
     type SourcingRequest,
     type SupplierQuote,
@@ -53,7 +54,7 @@ export default function RequestsPage() {
             const order = await awardQuote(requestId, quoteId);
             setSuccessReference(order.reference);
         } catch (cause) {
-            setActionError(cause instanceof Error ? cause.message : "Unable to award quote.");
+            setActionError(cause instanceof Error ? cause.message : "We could not select this quote. Please try again.");
         } finally {
             setAwardingId(null);
         }
@@ -64,13 +65,14 @@ export default function RequestsPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p className="text-[10px] font-bold tracking-[0.17em] text-[#6F9277] uppercase">
-                        Sourcing
+                        Supplier quotes
                     </p>
                     <h1 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">
-                        Quote requests
+                        Requests and quotes
                     </h1>
                     <p className="mt-2 text-sm text-[#707670]">
-                        Compare protected supplier offers and create a fulfillment order.
+                        Review quotes side by side and choose the supplier that best fits your
+                        price and delivery date.
                     </p>
                 </div>
                 <Link
@@ -86,8 +88,8 @@ export default function RequestsPage() {
                     <div className="flex items-start gap-3">
                         <CheckCircle2 size={18} className="mt-0.5 text-[#4F6F56]" />
                         <div>
-                            <p className="text-sm font-bold text-[#2F312F]">Order confirmed</p>
-                            <p className="text-xs text-[#667066]">{successReference} is awaiting supplier handoff proof.</p>
+                            <p className="text-sm font-bold text-[#2F312F]">Supplier selected</p>
+                            <p className="text-xs text-[#667066]">{successReference} has been created. The supplier will prepare it for Ninja Van pickup.</p>
                         </div>
                     </div>
                     <Link href="/auction/shop/orders" className="inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56]">
@@ -103,10 +105,10 @@ export default function RequestsPage() {
             ) : null}
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <Metric icon={FileText} label="Open requests" value={requests.filter((request) => ["sent", "quoted"].includes(request.status)).length.toString()} />
-                <Metric icon={Sparkles} label="Decisions ready" value={requests.filter((request) => request.status === "quoted").length.toString()} />
-                <Metric icon={Users} label="Protected suppliers" value={new Set(requests.flatMap((request) => request.selectedSupplierIds)).size.toString()} />
-                <Metric icon={CircleDollarSign} label="Open target" value={money(requests.filter((request) => ["sent", "quoted"].includes(request.status)).reduce((sum, request) => sum + targetValue(request), 0))} />
+                <Metric icon={FileText} label="Requests in progress" value={requests.filter((request) => ["sent", "quoted"].includes(request.status)).length.toString()} />
+                <Metric icon={Sparkles} label="Requests with quotes" value={requests.filter((request) => request.status === "quoted").length.toString()} />
+                <Metric icon={Users} label="Suppliers invited" value={new Set(requests.flatMap((request) => request.selectedSupplierIds)).size.toString()} />
+                <Metric icon={CircleDollarSign} label="Estimated order value" value={money(requests.filter((request) => ["sent", "quoted"].includes(request.status)).reduce((sum, request) => sum + targetValue(request), 0))} />
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -122,7 +124,7 @@ export default function RequestsPage() {
                                     : "border border-[#DDE5DC] bg-white text-[#667066]"
                             }`}
                         >
-                            {value === "all" ? "All" : value.replace("_", " ")}
+                            {value === "all" ? "All" : retailerRequestStatus(value)}
                         </button>
                     )
                 )}
@@ -154,7 +156,7 @@ export default function RequestsPage() {
                                                     ) : null}
                                                 </div>
                                                 <p className="mt-1 text-[10px] text-[#8A918A]">
-                                                    {request.reference} · {request.lines.length} lines · needed{" "}
+                                                    {request.reference} · {request.lines.length} items · delivery by{" "}
                                                     {new Date(`${request.deliveryDate}T12:00:00`).toLocaleDateString("en-SG", { dateStyle: "medium" })}
                                                 </p>
                                                 <div className="mt-3 flex flex-wrap gap-2">
@@ -168,7 +170,7 @@ export default function RequestsPage() {
                                         </div>
                                         <div className="flex flex-wrap items-center gap-5">
                                             <div>
-                                                <p className="text-[9px] text-[#8A918A]">Target</p>
+                                                <p className="text-[9px] text-[#8A918A]">Budget</p>
                                                 <p className="text-sm font-bold text-[#2F312F]">{money(targetValue(request))}</p>
                                             </div>
                                             <div>
@@ -192,9 +194,9 @@ export default function RequestsPage() {
                                             <div className="flex items-start gap-3 rounded-2xl border border-dashed border-[#C9D4C6] bg-white p-5">
                                                 <Clock3 size={18} className="mt-0.5 text-[#6F9277]" />
                                                 <div>
-                                                    <p className="text-sm font-bold text-[#2F312F]">Waiting for supplier quotes</p>
+                                                    <p className="text-sm font-bold text-[#2F312F]">Waiting for quotes</p>
                                                     <p className="mt-1 text-xs text-[#8A918A]">
-                                                        {request.selectedSupplierIds.length} protected suppliers were notified. Deadline:{" "}
+                                                        {request.selectedSupplierIds.length} suppliers received your request. Quotes are due{" "}
                                                         {new Date(request.quoteDeadline).toLocaleString("en-SG", { dateStyle: "medium", timeStyle: "short" })}.
                                                     </p>
                                                 </div>
@@ -206,10 +208,10 @@ export default function RequestsPage() {
                                                         <Bot size={18} className="mt-0.5 text-[#4F6F56]" />
                                                         <div>
                                                             <p className="text-xs font-bold text-[#2F312F]">
-                                                                Best-value ranking: {ranked[0].supplierAlias}
+                                                                Best overall match: {ranked[0].supplierAlias}
                                                             </p>
                                                             <p className="mt-1 text-[10px] leading-5 text-[#667066]">
-                                                                Score combines target-price fit and delivery speed. Review the offer before awarding.
+                                                                We compare total price and delivery date. Check the full quote before choosing.
                                                             </p>
                                                         </div>
                                                     </div>
@@ -269,7 +271,7 @@ function Status({ status }: { status: SourcingRequest["status"] }) {
               : status === "sent"
                 ? "bg-[#FFF5E6] text-[#94621B]"
                 : "bg-[#F1F2F0] text-[#747A74]";
-    return <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold capitalize ${style}`}>{status}</span>;
+    return <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${style}`}>{retailerRequestStatus(status)}</span>;
 }
 
 function QuoteCard({
@@ -291,7 +293,7 @@ function QuoteCard({
         <div className={`relative rounded-2xl border bg-white p-4 ${recommended ? "border-[#6F9277]" : "border-[#DDE5DC]"}`}>
             {recommended ? (
                 <span className="absolute -top-2 left-4 inline-flex items-center gap-1 rounded-full bg-[#4F6F56] px-2 py-1 text-[8px] font-bold text-white">
-                    <Sparkles size={8} /> Best value
+                    <Sparkles size={8} /> Best overall match
                 </span>
             ) : null}
             <div className="mt-1 flex items-start justify-between gap-3">
@@ -300,7 +302,7 @@ function QuoteCard({
                     <p className="mt-1 text-[10px] text-[#8A918A]">{quote.reference} · {quote.paymentTerms}</p>
                 </div>
                 <div className="rounded-xl bg-[#EDF3EC] px-2.5 py-2 text-center">
-                    <p className="text-[8px] text-[#6F9277]">Value score</p>
+                    <p className="text-[8px] text-[#6F9277]">Overall match</p>
                     <p className="text-sm font-bold text-[#4F6F56]">{quote.score}</p>
                 </div>
             </div>
@@ -322,7 +324,7 @@ function QuoteCard({
                 }`}
             >
                 {working ? <LoaderCircle className="animate-spin" size={13} /> : null}
-                {awarded ? "Awarded" : working ? "Confirming…" : "Award quote"}
+                {awarded ? "Selected" : working ? "Creating order…" : "Choose this quote"}
             </button>
         </div>
     );

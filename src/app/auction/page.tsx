@@ -14,7 +14,7 @@ export default function AuctionLanding() {
                     <BrandLockup size="lg" priority />
                 </Link>
                 <span className="hidden rounded-full border border-[#DDE5DC] bg-white/75 px-3 py-1.5 text-[10px] font-semibold tracking-[0.16em] text-[#4F6F56] uppercase sm:inline-flex">
-                    Retail procurement network
+                    For retailers and suppliers
                 </span>
             </header>
 
@@ -28,7 +28,7 @@ export default function AuctionLanding() {
                     className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#DDE5DC] bg-white/80 px-4 py-1.5 shadow-sm"
                 >
                     <Sparkles size={12} className="text-[#6F9277]" />
-                    <span className="text-xs font-semibold text-[#4F6F56]">One connected procurement workspace</span>
+                    <span className="text-xs font-semibold text-[#4F6F56]">Ordering and delivery in one place</span>
                 </motion.div>
 
                 {/* Title */}
@@ -50,8 +50,8 @@ export default function AuctionLanding() {
                     transition={{ duration: 0.6, delay: 0.2 }}
                     className="mb-12 max-w-2xl text-center text-base leading-7 text-[#666B66]"
                 >
-                    ReStock connects independent retailers and trusted suppliers to create smarter
-                    orders, compare quotes, and manage fulfillment with confidence.
+                    Create stock orders, compare supplier quotes, and track every delivery from
+                    pickup to arrival.
                 </motion.p>
 
                 {/* Role Cards */}
@@ -72,19 +72,19 @@ export default function AuctionLanding() {
                                         <Store size={24} className="text-white" />
                                     </div>
 
-                                    <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#6F9277] uppercase">Retailer workspace</p>
-                                    <h2 className="mb-2 text-xl font-bold text-[#2F312F]">Buy for my shop</h2>
+                                    <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#6F9277] uppercase">Retailer account</p>
+                                    <h2 className="mb-2 text-xl font-bold text-[#2F312F]">Order stock for my shop</h2>
                                     <p className="mb-6 text-sm leading-relaxed text-[#666B66]">
-                                        Build one clear order, improve it with smart checks, compare supplier
-                                        quotes, and keep fulfillment moving in one place.
+                                        Choose what you need, compare supplier quotes, and follow
+                                        delivery in one place.
                                     </p>
 
                                     {/* Value props */}
                                     <div className="space-y-2.5 mb-6">
                                         {[
-                                            { icon: Bot, text: "Automated order and price review" },
-                                            { icon: Shield, text: "Buy from verified suppliers" },
-                                            { icon: Sparkles, text: "Create and reorder faster" },
+                                            { icon: Bot, text: "Check prices and delivery dates before sending" },
+                                            { icon: Shield, text: "Keep shop and supplier names private" },
+                                            { icon: Sparkles, text: "Track every order with Ninja Van" },
                                         ].map((item) => (
                                             <div key={item.text} className="flex items-center gap-2.5">
                                                 <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md bg-[#EDF3EC]">
@@ -96,7 +96,7 @@ export default function AuctionLanding() {
                                     </div>
 
                                     <div className="flex items-center gap-2 text-sm font-semibold text-[#4F6F56] transition-all group-hover:gap-3">
-                                        Open retailer workspace <ArrowRight size={16} />
+                                        Go to retailer dashboard <ArrowRight size={16} />
                                     </div>
                                 </div>
                             </div>
@@ -119,19 +119,19 @@ export default function AuctionLanding() {
                                         <Truck size={24} className="text-white" />
                                     </div>
 
-                                    <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#6F9277] uppercase">Supplier workspace</p>
-                                    <h2 className="mb-2 text-xl font-bold text-[#2F312F]">Sell as a supplier</h2>
+                                    <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#6F9277] uppercase">Supplier account</p>
+                                    <h2 className="mb-2 text-xl font-bold text-[#2F312F]">Supply products to retailers</h2>
                                     <p className="mb-6 text-sm leading-relaxed text-[#666B66]">
-                                        Receive qualified order requests, submit complete quotes,
-                                        and manage awards through delivery.
+                                        Receive order requests, send quotes, and manage every
+                                        confirmed order through delivery.
                                     </p>
 
                                     {/* Value props */}
                                     <div className="space-y-2.5 mb-6">
                                         {[
-                                            { icon: FileText, text: "Respond to qualified retailer RFQs" },
-                                            { icon: Shield, text: "Transact through a trusted workflow" },
-                                            { icon: Sparkles, text: "Forecast volume and act earlier" },
+                                            { icon: FileText, text: "See new quote requests" },
+                                            { icon: Shield, text: "Keep your company name private" },
+                                            { icon: Sparkles, text: "Track orders and payment status" },
                                         ].map((item) => (
                                             <div key={item.text} className="flex items-center gap-2.5">
                                                 <div className="w-5 h-5 rounded-md bg-[#F2F5F0] flex items-center justify-center flex-shrink-0">
@@ -143,7 +143,7 @@ export default function AuctionLanding() {
                                     </div>
 
                                     <div className="flex items-center gap-2 text-sm font-semibold text-[#4F6F56] transition-all group-hover:gap-3">
-                                        Open supplier workspace <ArrowRight size={16} />
+                                        Go to supplier dashboard <ArrowRight size={16} />
                                     </div>
                                 </div>
                             </div>
@@ -159,10 +159,10 @@ export default function AuctionLanding() {
                     className="mt-12 flex flex-wrap items-center justify-center gap-8 border-t border-[#DDE5DC] pt-8"
                 >
                     {[
-                        { value: "One", label: "Procurement workspace" },
-                        { value: "Live", label: "Supplier competition" },
-                        { value: "Clear", label: "Order visibility" },
-                        { value: "SEA", label: "Built for the region" },
+                        { value: "One", label: "Place to manage orders" },
+                        { value: "Clear", label: "Quote comparison" },
+                        { value: "Tracked", label: "Ninja Van delivery" },
+                        { value: "Private", label: "Business identities" },
                     ].map((stat) => (
                         <div key={stat.label} className="text-center">
                             <p className="text-lg font-bold text-[#2F312F]">{stat.value}</p>
