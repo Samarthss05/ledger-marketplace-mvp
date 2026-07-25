@@ -19,6 +19,8 @@ import {
     Trash2,
     Users,
 } from "lucide-react";
+import { Field, fieldClass, primaryButtonClass } from "../../../components/form";
+import { money, shortDate } from "../../../lib/format";
 import {
     type OrderLine,
     type SupplierDirectoryEntry,
@@ -27,10 +29,6 @@ import {
 import { products, type Product } from "../../../lib/products-db";
 
 const steps = ["Order details", "Review", "Choose suppliers", "Send request"];
-
-function money(value: number) {
-    return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" }).format(value);
-}
 
 function suggestedTarget(product: Product) {
     return Number(Math.max(product.cost * 1.08, product.price * 0.76).toFixed(2));
@@ -50,8 +48,7 @@ function supplierScore(supplier: SupplierDirectoryEntry, lines: OrderLine[]) {
 
 export default function CreateOrderPage() {
     const router = useRouter();
-    const { createRequest, supplierDirectory, loading, error: storeError } =
-        useOrderWorkflowStore();
+    const { createRequest, supplierDirectory, loading, error: storeError } = useOrderWorkflowStore();
     const minimumDate = useMemo(() => {
         const date = new Date();
         date.setDate(date.getDate() + 2);
@@ -102,9 +99,7 @@ export default function CreateOrderPage() {
     };
 
     const updateLine = (id: string, patch: Partial<OrderLine>) =>
-        setLines((current) =>
-            current.map((line) => (line.id === id ? { ...line, ...patch } : line))
-        );
+        setLines((current) => current.map((line) => (line.id === id ? { ...line, ...patch } : line)));
 
     const canContinue =
         step === 0
@@ -130,43 +125,48 @@ export default function CreateOrderPage() {
             });
             router.push("/auction/shop/requests");
         } catch (cause) {
-            setFormError(cause instanceof Error ? cause.message : "We could not create this request. Please try again.");
+            setFormError(
+                cause instanceof Error
+                    ? cause.message
+                    : "We could not create this request. Please try again."
+            );
         } finally {
             setSubmitting(false);
         }
     };
 
     return (
-        <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
             <Link
                 href="/auction/shop"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#667066]"
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#667066] hover:text-[#2F312F]"
             >
-                <ArrowLeft size={13} /> Dashboard
+                <ArrowLeft size={14} /> Dashboard
             </Link>
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-xs font-bold tracking-[0.17em] text-[#6F9277] uppercase">
+                    <p className="text-[11px] font-semibold tracking-[0.14em] text-[#6F9277] uppercase">
                         New order
                     </p>
-                    <h1 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">
+                    <h1 className="mt-1.5 text-[28px] leading-tight font-semibold tracking-[-0.025em] text-[#2F312F]">
                         Request quotes for a new order
                     </h1>
-                    <p className="mt-2 text-sm text-[#707670]">
-                        Add the products you need, review your budget, and choose which suppliers
-                        can quote.
+                    <p className="mt-1.5 max-w-2xl text-[15px] leading-6 text-[#707670]">
+                        Add the products you need, review your budget, and choose which suppliers can
+                        quote.
                     </p>
                 </div>
-                <p className="text-xs font-semibold text-[#6F9277]">
+                <p className="shrink-0 text-[13px] font-medium text-[#6F9277]">
                     Step {step + 1} of {steps.length}
                 </p>
             </div>
 
-            <div className="mt-7 grid gap-2 sm:grid-cols-4">
+            <ol className="mt-6 grid gap-2 sm:grid-cols-4">
                 {steps.map((label, index) => (
-                    <div
+                    <li
                         key={label}
-                        className={`rounded-xl px-3 py-2.5 text-xs font-semibold ${
+                        aria-current={index === step ? "step" : undefined}
+                        className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] font-medium ${
                             index === step
                                 ? "bg-[#365845] text-white"
                                 : index < step
@@ -174,151 +174,162 @@ export default function CreateOrderPage() {
                                   : "border border-[#DDE5DC] bg-white text-[#8A918A]"
                         }`}
                     >
-                        <span className="mr-2">{index < step ? "✓" : index + 1}</span>
+                        <span
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
+                                index === step
+                                    ? "bg-white/20 text-white"
+                                    : index < step
+                                      ? "bg-[#3F7048] text-white"
+                                      : "bg-[#F1F4F0] text-[#8A918A]"
+                            }`}
+                        >
+                            {index < step ? <Check size={12} strokeWidth={3} /> : index + 1}
+                        </span>
                         {label}
-                    </div>
+                    </li>
                 ))}
-            </div>
+            </ol>
 
-            <section className="mt-6 rounded-3xl border border-[#DDE5DC] bg-white p-5 sm:p-7">
+            <section className="mt-5 rounded-2xl border border-[#E2E8E0] bg-white p-5 sm:p-7">
                 {step === 0 ? (
                     <div className="space-y-6">
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <label className="sm:col-span-2">
-                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
-                                    Order name
-                                </span>
+                            <Field label="Order name" className="sm:col-span-2" htmlFor="order-title">
                                 <input
+                                    id="order-title"
                                     required
                                     maxLength={140}
                                     value={title}
                                     onChange={(event) => setTitle(event.target.value)}
                                     placeholder="e.g. August drinks order"
-                                    className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                    className={fieldClass}
                                 />
-                            </label>
-                            <label>
-                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
-                                    Delivery date
-                                </span>
+                            </Field>
+                            <Field label="Delivery date" htmlFor="order-date">
                                 <div className="relative">
                                     <Calendar
-                                        size={15}
-                                        className="pointer-events-none absolute top-3.5 left-3.5 text-[#7B837B]"
+                                        size={16}
+                                        className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[#7B837B]"
                                     />
                                     <input
+                                        id="order-date"
                                         type="date"
                                         min={minimumDate}
                                         value={deliveryDate}
                                         onChange={(event) => setDeliveryDate(event.target.value)}
-                                        className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] py-3 pr-4 pl-10 text-sm outline-none focus:border-[#6F9277]"
+                                        className={`${fieldClass} pl-10`}
                                     />
                                 </div>
-                            </label>
-                            <label>
-                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
-                                    Quote deadline
-                                </span>
+                            </Field>
+                            <Field label="Quote deadline" htmlFor="order-priority">
                                 <select
+                                    id="order-priority"
                                     value={priority}
                                     onChange={(event) =>
                                         setPriority(event.target.value as "standard" | "urgent")
                                     }
-                                    className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                    className={fieldClass}
                                 >
                                     <option value="standard">Standard · suppliers have 48 hours</option>
                                     <option value="urgent">Urgent · suppliers have 12 hours</option>
                                 </select>
-                            </label>
+                            </Field>
                         </div>
 
-                        <div>
-                            <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
-                                Add products
-                            </span>
+                        <Field label="Add products" hint={`${lines.length} added`} htmlFor="order-search">
                             <div className="relative">
                                 <Search
-                                    size={15}
-                                    className="pointer-events-none absolute top-3.5 left-3.5 text-[#7B837B]"
+                                    size={16}
+                                    className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[#7B837B]"
                                 />
                                 <input
+                                    id="order-search"
                                     value={search}
                                     onChange={(event) => setSearch(event.target.value)}
                                     placeholder="Search product, category, or barcode"
-                                    className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] py-3 pr-4 pl-10 text-sm outline-none focus:border-[#6F9277]"
+                                    className={`${fieldClass} pl-10`}
                                 />
                             </div>
                             {search ? (
-                                <div className="mt-2 overflow-hidden rounded-xl border border-[#DDE5DC]">
+                                <div className="mt-2 overflow-hidden rounded-lg border border-[#DDE5DC]">
                                     {filteredProducts.map((product) => (
                                         <button
                                             type="button"
                                             key={product.id}
                                             onClick={() => addProduct(product)}
-                                            className="flex w-full items-center justify-between border-b border-[#EEF1ED] px-4 py-3 text-left last:border-0 hover:bg-[#F7F9F5]"
+                                            className="flex w-full items-center justify-between gap-3 border-b border-[#EEF1ED] px-4 py-3 text-left transition last:border-0 hover:bg-[#F7F9F5]"
                                         >
-                                            <span>
-                                                <span className="block text-xs font-semibold text-[#2F312F]">
+                                            <span className="min-w-0">
+                                                <span className="block truncate text-[14px] font-medium text-[#2F312F]">
                                                     {product.name}
                                                 </span>
-                                                <span className="text-xs text-[#8A918A]">
+                                                <span className="text-[13px] text-[#8A918A]">
                                                     {product.category} · {product.barcode}
                                                 </span>
                                             </span>
-                                            <Plus size={14} className="text-[#4F6F56]" />
+                                            <Plus size={15} className="shrink-0 text-[#4F6F56]" />
                                         </button>
                                     ))}
                                     {filteredProducts.length === 0 ? (
-                                        <p className="px-4 py-3 text-xs text-[#8A918A]">
+                                        <p className="px-4 py-3 text-[13px] text-[#8A918A]">
                                             No matching products.
                                         </p>
                                     ) : null}
                                 </div>
                             ) : null}
-                        </div>
+                        </Field>
 
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                             {lines.map((line) => (
                                 <div
                                     key={line.id}
-                                    className="grid gap-3 rounded-2xl border border-[#E1E7DF] bg-[#FAFBF9] p-4 sm:grid-cols-[1fr_110px_130px_36px] sm:items-end"
+                                    className="grid gap-3 rounded-xl border border-[#E1E7DF] bg-[#FAFBF9] p-4 sm:grid-cols-[1fr_110px_140px_40px] sm:items-end"
                                 >
-                                    <div>
-                                        <p className="text-xs font-bold text-[#2F312F]">
+                                    <div className="min-w-0">
+                                        <p className="truncate text-[14px] font-medium text-[#2F312F]">
                                             {line.productName}
                                         </p>
-                                        <p className="mt-1 text-xs text-[#8A918A]">{line.category}</p>
+                                        <p className="mt-1 text-[13px] text-[#8A918A]">{line.category}</p>
                                     </div>
                                     <label>
-                                        <span className="mb-1 block text-xs text-[#777E77]">Quantity</span>
+                                        <span className="mb-1 block text-[12px] text-[#777E77]">
+                                            Quantity
+                                        </span>
                                         <input
                                             type="number"
                                             min={1}
+                                            inputMode="numeric"
                                             value={line.quantity}
                                             onChange={(event) =>
                                                 updateLine(line.id, {
                                                     quantity: Math.max(0, Number(event.target.value)),
                                                 })
                                             }
-                                            className="w-full rounded-lg border border-[#D7DFD5] bg-white px-3 py-2 text-xs"
+                                            className="tabular h-10 w-full rounded-lg border border-[#D7DFD5] bg-white px-3 text-[14px] outline-none focus:border-[#6F9277] focus:ring-2 focus:ring-[#6F9277]/15"
                                         />
                                     </label>
                                     <label>
-                                        <span className="mb-1 block text-xs text-[#777E77]">
+                                        <span className="mb-1 block text-[12px] text-[#777E77]">
                                             Budget per unit
                                         </span>
-                                        <input
-                                            type="number"
-                                            min={0.01}
-                                            step={0.01}
-                                            value={line.targetPrice}
-                                            onChange={(event) =>
-                                                updateLine(line.id, {
-                                                    targetPrice: Math.max(0, Number(event.target.value)),
-                                                })
-                                            }
-                                            className="w-full rounded-lg border border-[#D7DFD5] bg-white px-3 py-2 text-xs"
-                                        />
+                                        <div className="relative">
+                                            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[13px] text-[#8A918A]">
+                                                S$
+                                            </span>
+                                            <input
+                                                type="number"
+                                                min={0.01}
+                                                step={0.01}
+                                                inputMode="decimal"
+                                                value={line.targetPrice}
+                                                onChange={(event) =>
+                                                    updateLine(line.id, {
+                                                        targetPrice: Math.max(0, Number(event.target.value)),
+                                                    })
+                                                }
+                                                className="tabular h-10 w-full rounded-lg border border-[#D7DFD5] bg-white pr-3 pl-8 text-[14px] outline-none focus:border-[#6F9277] focus:ring-2 focus:ring-[#6F9277]/15"
+                                            />
+                                        </div>
                                     </label>
                                     <button
                                         type="button"
@@ -327,59 +338,85 @@ export default function CreateOrderPage() {
                                                 current.filter((candidate) => candidate.id !== line.id)
                                             )
                                         }
-                                        className="rounded-lg p-2 text-[#A45F48] hover:bg-[#FFF2EF]"
+                                        className="flex h-10 w-10 items-center justify-center rounded-lg text-[#A45F48] transition hover:bg-[#FFF2EF]"
                                         aria-label={`Remove ${line.productName}`}
                                     >
-                                        <Trash2 size={15} />
+                                        <Trash2 size={16} />
                                     </button>
                                 </div>
                             ))}
                             {lines.length === 0 ? (
-                                <div className="rounded-2xl border border-dashed border-[#C9D4C6] px-5 py-10 text-center">
+                                <div className="rounded-xl border border-dashed border-[#C9D4C6] px-5 py-10 text-center">
                                     <Package size={24} className="mx-auto text-[#A9B4A6]" />
-                                    <p className="mt-2 text-xs text-[#7B817B]">
+                                    <p className="mt-2 text-[13px] text-[#7B817B]">
                                         Search and add at least one product.
+                                    </p>
+                                </div>
+                            ) : null}
+                            {lines.length > 0 ? (
+                                <div className="flex items-baseline justify-between gap-4 px-1 pt-1">
+                                    <p className="text-[13px] text-[#7B817B]">
+                                        {lines.length} product{lines.length === 1 ? "" : "s"} ·{" "}
+                                        {lines.reduce((sum, line) => sum + line.quantity, 0)} units
+                                    </p>
+                                    <p className="text-[14px] text-[#7B817B]">
+                                        Budget{" "}
+                                        <span className="tabular font-semibold text-[#2F312F]">
+                                            {money(targetTotal)}
+                                        </span>
                                     </p>
                                 </div>
                             ) : null}
                         </div>
 
-                        <label>
-                            <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
-                                Receiving instructions
-                            </span>
+                        <Field label="Receiving instructions" hint="Optional" htmlFor="order-notes">
                             <textarea
+                                id="order-notes"
                                 maxLength={2000}
                                 rows={3}
                                 value={notes}
                                 onChange={(event) => setNotes(event.target.value)}
                                 placeholder="Receiving hours, pallet limits, or handling instructions"
-                                className="w-full resize-none rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                className={`${fieldClass} resize-none`}
                             />
-                        </label>
+                        </Field>
                     </div>
                 ) : null}
 
                 {step === 1 ? (
                     <div>
                         <div className="flex items-start gap-3">
-                            <div className="rounded-xl bg-[#EAF3E8] p-2.5 text-[#4F6F56]">
+                            <div className="shrink-0 rounded-lg bg-[#EAF3E8] p-2.5 text-[#4F6F56]">
                                 <Bot size={19} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-[#2F312F]">Review your order</h2>
-                                <p className="mt-1 text-xs leading-5 text-[#707670]">
-                                    Check your budget, delivery date, and receiving instructions
-                                    before sending.
+                                <h2 className="text-[17px] font-semibold text-[#2F312F]">
+                                    Review your order
+                                </h2>
+                                <p className="mt-1 text-[13px] leading-6 text-[#707670]">
+                                    Check your budget, delivery date, and receiving instructions before
+                                    sending.
                                 </p>
                             </div>
                         </div>
-                        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                            <Insight label="Your budget" value={money(targetTotal)} detail="Maximum you want to spend" />
-                            <Insight label="Retail price estimate" value={money(marketTotal)} detail="Based on catalogue prices" />
-                            <Insight label="Estimated saving" value={money(estimatedSaving)} detail="Compared with retail prices" />
+                        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                            <Insight
+                                label="Your budget"
+                                value={money(targetTotal)}
+                                detail="Maximum you want to spend"
+                            />
+                            <Insight
+                                label="Retail price estimate"
+                                value={money(marketTotal)}
+                                detail="Based on catalogue prices"
+                            />
+                            <Insight
+                                label="Estimated saving"
+                                value={money(estimatedSaving)}
+                                detail="Compared with retail prices"
+                            />
                         </div>
-                        <div className="mt-5 space-y-3">
+                        <div className="mt-4 space-y-2.5">
                             <ReviewRow
                                 ok={estimatedSaving > 0}
                                 title="Budget check"
@@ -415,28 +452,29 @@ export default function CreateOrderPage() {
                     <div>
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <h2 className="text-lg font-bold text-[#2F312F]">
+                                <h2 className="text-[17px] font-semibold text-[#2F312F]">
                                     Choose suppliers to invite
                                 </h2>
-                                <p className="mt-1 text-xs leading-5 text-[#707670]">
-                                    Supplier names are private. Choose using their ReStock ID,
-                                    product match, and delivery record.
+                                <p className="mt-1 text-[13px] leading-6 text-[#707670]">
+                                    Supplier names are private. Choose using their ReStock ID, product
+                                    match, and delivery record.
                                 </p>
                             </div>
-                            <Users size={20} className="text-[#6F9277]" />
+                            <Users size={20} className="shrink-0 text-[#6F9277]" />
                         </div>
                         {loading ? (
                             <div className="flex items-center justify-center py-16 text-[#6F9277]">
                                 <LoaderCircle className="animate-spin" size={22} />
                             </div>
                         ) : rankedSuppliers.length ? (
-                            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                            <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
                                 {rankedSuppliers.map(({ supplier, score }, index) => {
                                     const selected = selectedSupplierIds.includes(supplier.id);
                                     return (
                                         <button
                                             type="button"
                                             key={supplier.id}
+                                            aria-pressed={selected}
                                             onClick={() =>
                                                 setSelectedSupplierIds((current) =>
                                                     selected
@@ -444,51 +482,55 @@ export default function CreateOrderPage() {
                                                         : [...current, supplier.id]
                                                 )
                                             }
-                                            className={`rounded-2xl border p-4 text-left transition ${
+                                            className={`rounded-xl border p-4 text-left transition ${
                                                 selected
-                                                    ? "border-[#6F9277] bg-[#F1F6F0] ring-1 ring-[#6F9277]/20"
-                                                    : "border-[#DDE5DC] hover:bg-[#FAFBF9]"
+                                                    ? "border-[#6F9277] bg-[#F1F6F0]"
+                                                    : "border-[#E2E8E0] hover:border-[#B9C6B8] hover:bg-[#FAFBF9]"
                                             }`}
                                         >
                                             <div className="flex items-start justify-between gap-3">
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-bold text-[#2F312F]">
+                                                <div className="min-w-0">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <p className="text-[15px] font-semibold text-[#2F312F]">
                                                             {supplier.aliasCode}
                                                         </p>
                                                         {index === 0 ? (
-                                                            <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F1E7] px-2 py-0.5 text-[11px] font-bold text-[#3F7048]">
-                                                                <Sparkles size={8} /> Best match
+                                                            <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F1E7] px-2 py-0.5 text-[11px] font-semibold text-[#3F7048]">
+                                                                <Sparkles size={10} /> Best match
                                                             </span>
                                                         ) : null}
                                                     </div>
-                                                    <p className="mt-1 text-xs text-[#8A918A]">
+                                                    <p className="mt-1 text-[13px] text-[#8A918A]">
                                                         {supplier.categoryTags.join(" · ") || "General supply"}
                                                     </p>
                                                 </div>
                                                 <span
-                                                    className={`flex h-6 w-6 items-center justify-center rounded-full ${
+                                                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition ${
                                                         selected
                                                             ? "bg-[#4F6F56] text-white"
                                                             : "border border-[#CBD5C8] text-transparent"
                                                     }`}
                                                 >
-                                                    <Check size={13} />
+                                                    <Check size={13} strokeWidth={3} />
                                                 </span>
                                             </div>
-                                            <div className="mt-4 flex gap-4 text-xs text-[#667066]">
+                                            <div className="mt-3.5 flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-[#667066]">
                                                 <span>
-                                                    Product match <b className="text-[#2F312F]">{score}</b>
+                                                    Product match{" "}
+                                                    <b className="tabular font-semibold text-[#2F312F]">{score}</b>
                                                 </span>
                                                 <span>
                                                     Delivered on time{" "}
-                                                    <b className="text-[#2F312F]">
-                                                        {supplier.onTimeRate || "New"}{supplier.onTimeRate ? "%" : ""}
+                                                    <b className="tabular font-semibold text-[#2F312F]">
+                                                        {supplier.onTimeRate || "New"}
+                                                        {supplier.onTimeRate ? "%" : ""}
                                                     </b>
                                                 </span>
                                                 <span>
                                                     Completed orders{" "}
-                                                    <b className="text-[#2F312F]">{supplier.completedOrders}</b>
+                                                    <b className="tabular font-semibold text-[#2F312F]">
+                                                        {supplier.completedOrders}
+                                                    </b>
                                                 </span>
                                             </div>
                                         </button>
@@ -496,12 +538,12 @@ export default function CreateOrderPage() {
                                 })}
                             </div>
                         ) : (
-                            <div className="mt-6 rounded-2xl border border-dashed border-[#C9D4C6] p-8 text-center">
+                            <div className="mt-5 rounded-xl border border-dashed border-[#C9D4C6] p-8 text-center">
                                 <CircleAlert size={22} className="mx-auto text-[#A45F48]" />
-                                <p className="mt-3 text-sm font-semibold text-[#2F312F]">
+                                <p className="mt-3 text-[15px] font-semibold text-[#2F312F]">
                                     No suppliers are available right now
                                 </p>
-                                <p className="mt-1 text-xs text-[#7B817B]">
+                                <p className="mt-1 text-[13px] text-[#7B817B]">
                                     Please try again later or contact ReStock support.
                                 </p>
                             </div>
@@ -511,61 +553,76 @@ export default function CreateOrderPage() {
 
                 {step === 3 ? (
                     <div>
-                        <h2 className="text-lg font-bold text-[#2F312F]">Review and send</h2>
-                        <p className="mt-1 text-xs text-[#707670]">
+                        <h2 className="text-[17px] font-semibold text-[#2F312F]">Review and send</h2>
+                        <p className="mt-1 text-[13px] text-[#707670]">
                             Only the suppliers you choose will receive this request.
                         </p>
-                        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
                             <Summary label="Order name" value={title} />
-                            <Summary label="Delivery date" value={new Date(`${deliveryDate}T12:00:00`).toLocaleDateString("en-SG", { dateStyle: "medium" })} />
-                            <Summary label="Items" value={`${lines.length} products · ${lines.reduce((sum, line) => sum + line.quantity, 0)} units`} />
+                            <Summary
+                                label="Delivery date"
+                                value={shortDate(`${deliveryDate}T12:00:00`)}
+                            />
+                            <Summary
+                                label="Items"
+                                value={`${lines.length} products · ${lines.reduce((sum, line) => sum + line.quantity, 0)} units`}
+                            />
                             <Summary label="Budget" value={money(targetTotal)} />
-                            <Summary label="Suppliers invited" value={`${selectedSupplierIds.length} suppliers`} />
-                            <Summary label="Quote window" value={priority === "urgent" ? "12 hours" : "48 hours"} />
+                            <Summary
+                                label="Suppliers invited"
+                                value={`${selectedSupplierIds.length} suppliers`}
+                            />
+                            <Summary
+                                label="Quote window"
+                                value={priority === "urgent" ? "12 hours" : "48 hours"}
+                            />
                         </div>
-                        <div className="mt-5 rounded-2xl bg-[#F3F7F2] p-4 text-xs leading-5 text-[#5E685E]">
-                            Your shop name and suppliers&apos; company names stay private. Both
-                            sides use ReStock IDs while quotes, delivery updates, and photos are
-                            recorded with the order.
+                        <div className="mt-4 rounded-xl bg-[#F3F7F2] px-4 py-3.5 text-[13px] leading-6 text-[#5E685E]">
+                            Your shop name and suppliers&apos; company names stay private. Both sides
+                            use ReStock IDs while quotes, delivery updates, and photos are recorded
+                            with the order.
                         </div>
                     </div>
                 ) : null}
 
-                {(formError || storeError) ? (
-                    <p role="alert" className="mt-5 rounded-xl bg-[#FFF2EF] px-4 py-3 text-xs text-[#A33A2B]">
+                {formError || storeError ? (
+                    <p
+                        role="alert"
+                        className="mt-5 rounded-lg bg-[#FFF2EF] px-4 py-3 text-[13px] text-[#A33A2B]"
+                    >
                         {formError ?? storeError}
                     </p>
                 ) : null}
 
-                <div className="mt-7 flex items-center justify-between border-t border-[#E8ECE7] pt-5">
+                <div className="mt-6 flex items-center justify-between gap-3 border-t border-[#E8ECE7] pt-5">
                     <button
                         type="button"
                         onClick={() => setStep((current) => Math.max(0, current - 1))}
                         disabled={step === 0 || submitting}
-                        className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold text-[#667066] disabled:opacity-30"
+                        className="inline-flex h-11 items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold text-[#667066] transition hover:bg-[#F4F7F3] disabled:opacity-30 disabled:hover:bg-transparent"
                     >
-                        <ArrowLeft size={13} /> Back
+                        <ArrowLeft size={15} /> Back
                     </button>
                     {step < steps.length - 1 ? (
                         <button
                             type="button"
                             onClick={() => setStep((current) => current + 1)}
                             disabled={!canContinue}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-[#4F6F56] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40"
+                            className={primaryButtonClass}
                         >
-                            Continue <ArrowRight size={13} />
+                            Continue <ArrowRight size={15} />
                         </button>
                     ) : (
                         <button
                             type="button"
                             onClick={() => void submit()}
                             disabled={submitting}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#365845] px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+                            className={primaryButtonClass}
                         >
                             {submitting ? (
-                                <LoaderCircle className="animate-spin" size={14} />
+                                <LoaderCircle className="animate-spin" size={16} />
                             ) : (
-                                <Send size={14} />
+                                <Send size={16} />
                             )}
                             Send request to suppliers
                         </button>
@@ -578,25 +635,27 @@ export default function CreateOrderPage() {
 
 function Insight({ label, value, detail }: { label: string; value: string; detail: string }) {
     return (
-        <div className="rounded-2xl border border-[#DDE5DC] p-4">
-            <p className="text-xs font-semibold text-[#7B817B]">{label}</p>
-            <p className="mt-1 text-xl font-bold text-[#2F312F]">{value}</p>
-            <p className="mt-1 text-xs text-[#8A918A]">{detail}</p>
+        <div className="rounded-xl border border-[#E2E8E0] p-4">
+            <p className="text-[13px] font-medium text-[#7B817B]">{label}</p>
+            <p className="tabular mt-1.5 text-[22px] leading-none font-semibold text-[#2F312F]">
+                {value}
+            </p>
+            <p className="mt-1.5 text-[12px] text-[#8A918A]">{detail}</p>
         </div>
     );
 }
 
 function ReviewRow({ ok, title, detail }: { ok: boolean; title: string; detail: string }) {
     return (
-        <div className="flex items-start gap-3 rounded-2xl bg-[#FAFBF9] p-4">
+        <div className="flex items-start gap-3 rounded-xl bg-[#FAFBF9] px-4 py-3.5">
             {ok ? (
-                <Check size={17} className="mt-0.5 text-[#4F6F56]" />
+                <Check size={17} className="mt-0.5 shrink-0 text-[#4F6F56]" />
             ) : (
-                <CircleAlert size={17} className="mt-0.5 text-[#B26A35]" />
+                <CircleAlert size={17} className="mt-0.5 shrink-0 text-[#B26A35]" />
             )}
             <div>
-                <p className="text-xs font-bold text-[#2F312F]">{title}</p>
-                <p className="mt-1 text-[11px] leading-5 text-[#707670]">{detail}</p>
+                <p className="text-[14px] font-semibold text-[#2F312F]">{title}</p>
+                <p className="mt-1 text-[13px] leading-5 text-[#707670]">{detail}</p>
             </div>
         </div>
     );
@@ -604,9 +663,9 @@ function ReviewRow({ ok, title, detail }: { ok: boolean; title: string; detail: 
 
 function Summary({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-2xl border border-[#E1E7DF] p-4">
-            <p className="text-xs font-semibold text-[#8A918A]">{label}</p>
-            <p className="mt-1 text-sm font-bold text-[#2F312F]">{value}</p>
+        <div className="rounded-xl border border-[#E1E7DF] p-4">
+            <p className="text-[13px] text-[#8A918A]">{label}</p>
+            <p className="mt-1 text-[15px] font-semibold text-[#2F312F]">{value}</p>
         </div>
     );
 }

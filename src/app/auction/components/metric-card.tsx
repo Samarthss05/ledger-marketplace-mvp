@@ -22,32 +22,42 @@ export function MetricCard({
 }: MetricCardProps) {
     const interactive = Boolean(href || onClick);
     const cardClassName = [
-        "group flex min-h-36 min-w-0 w-full flex-col justify-between overflow-hidden rounded-2xl border p-4 text-left transition sm:p-5",
+        "group flex min-w-0 w-full flex-col gap-3 rounded-xl border p-4 text-left transition",
         active
-            ? "border-[#8FA993] bg-[#F3F7F2] shadow-[0_16px_35px_-28px_rgba(54,88,69,0.7)]"
-            : "border-[#DDE5DC] bg-white",
+            ? "border-[#8FA993] bg-[#F3F7F2]"
+            : "border-[#E2E8E0] bg-white",
         interactive
-            ? "cursor-pointer hover:-translate-y-0.5 hover:border-[#AFC2B1] hover:shadow-[0_16px_35px_-28px_rgba(54,88,69,0.65)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6F9277]"
+            ? "cursor-pointer hover:border-[#B4C5B6] hover:shadow-[0_10px_24px_-18px_rgba(54,88,69,0.55)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6F9277]"
             : "",
     ].join(" ");
 
     const content = (
         <>
-            <div className="flex items-start justify-between gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EDF3EC] text-[#55765D]">
-                    <Icon size={18} strokeWidth={1.9} />
+            <div className="flex items-center gap-2.5">
+                <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                        active ? "bg-[#DCE8DA] text-[#3F6047]" : "bg-[#EDF3EC] text-[#55765D]"
+                    }`}
+                >
+                    <Icon size={15} strokeWidth={2} />
                 </span>
+                <p className="min-w-0 flex-1 text-[13px] leading-snug font-medium text-balance text-[#5D645D]">
+                    {label}
+                </p>
                 {interactive ? (
                     <ArrowRight
-                        size={15}
-                        className="mt-1 text-[#A8B4A9] transition group-hover:translate-x-0.5 group-hover:text-[#4F6F56]"
+                        size={14}
+                        className="mt-0.5 shrink-0 self-start text-[#B3BDB4] transition group-hover:translate-x-0.5 group-hover:text-[#4F6F56]"
                     />
                 ) : null}
             </div>
-            <div className="mt-5">
-                <p className="break-words text-xl font-bold tracking-[-0.025em] text-[#2F312F] sm:text-2xl">{value}</p>
-                <p className="mt-1 text-sm font-semibold leading-5 text-[#414641]">{label}</p>
-                {detail ? <p className="mt-1 text-xs leading-5 text-[#7B817B]">{detail}</p> : null}
+            <div className="mt-auto">
+                <p className="tabular text-[22px] leading-none font-semibold tracking-[-0.025em] break-words text-[#2F312F] sm:text-[26px]">
+                    {value}
+                </p>
+                {detail ? (
+                    <p className="mt-1.5 text-[12px] leading-snug text-[#8A918A]">{detail}</p>
+                ) : null}
             </div>
         </>
     );

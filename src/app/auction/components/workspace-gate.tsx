@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { type AccountType, useAuth } from "./auth-context";
+import { fieldClass, primaryButtonClass } from "./form";
 
 const supplierCategories = [
     "Beverages",
@@ -69,14 +70,14 @@ function AuthScreen() {
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(111,146,119,0.14),transparent_34%),linear-gradient(145deg,#F7F9F5,#FFFFFF)] px-4 py-8">
             <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center">
-                <div className="grid w-full overflow-hidden rounded-[32px] border border-[#DDE5DC] bg-white shadow-[0_40px_100px_-60px_rgba(43,74,52,0.65)] lg:grid-cols-[1.05fr_0.95fr]">
+                <div className="grid w-full overflow-hidden rounded-2xl border border-[#DDE5DC] bg-white shadow-[0_40px_100px_-60px_rgba(43,74,52,0.65)] lg:grid-cols-[1.05fr_0.95fr]">
                     <section className="bg-[#365845] p-8 text-white sm:p-12">
                         <BrandLockup
                             size="lg"
                             priority
                             className="rounded-xl bg-white px-3 py-2"
                         />
-                        <p className="mt-14 text-[11px] font-bold tracking-[0.18em] text-[#CFE0D1] uppercase">
+                        <p className="mt-12 text-[11px] font-semibold tracking-[0.16em] text-[#CFE0D1] uppercase">
                             Secure business account
                         </p>
                         <h1 className="mt-3 max-w-lg text-4xl font-bold tracking-[-0.04em] sm:text-5xl">
@@ -115,7 +116,7 @@ function AuthScreen() {
 
                             <form className="mt-8 space-y-4" onSubmit={submit}>
                                 <label className="block">
-                                    <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                                    <span className="mb-1.5 block text-[13px] font-medium text-[#414641]">
                                         Work email
                                     </span>
                                     <input
@@ -124,11 +125,11 @@ function AuthScreen() {
                                         required
                                         value={email}
                                         onChange={(event) => setEmail(event.target.value)}
-                                        className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none transition focus:border-[#6F9277] focus:ring-2 focus:ring-[#6F9277]/10"
+                                        className={fieldClass}
                                     />
                                 </label>
                                 <label className="block">
-                                    <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                                    <span className="mb-1.5 block text-[13px] font-medium text-[#414641]">
                                         Password
                                     </span>
                                     <input
@@ -140,17 +141,17 @@ function AuthScreen() {
                                         required
                                         value={password}
                                         onChange={(event) => setPassword(event.target.value)}
-                                        className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none transition focus:border-[#6F9277] focus:ring-2 focus:ring-[#6F9277]/10"
+                                        className={fieldClass}
                                     />
                                 </label>
 
                                 {formError || sessionError ? (
-                                    <p role="alert" className="rounded-xl bg-[#FFF2EF] px-3 py-2 text-xs text-[#A33A2B]">
+                                    <p role="alert" className="rounded-lg bg-[#FFF2EF] px-3.5 py-2.5 text-[13px] text-[#A33A2B]">
                                         {formError ?? sessionError}
                                     </p>
                                 ) : null}
                                 {message ? (
-                                    <p className="rounded-xl bg-[#EDF6EC] px-3 py-2 text-xs text-[#365845]">
+                                    <p className="rounded-lg bg-[#EDF6EC] px-3.5 py-2.5 text-[13px] text-[#365845]">
                                         {message}
                                     </p>
                                 ) : null}
@@ -158,7 +159,7 @@ function AuthScreen() {
                                 <button
                                     type="submit"
                                     disabled={submitting}
-                                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#4F6F56] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#3F6047] disabled:cursor-not-allowed disabled:opacity-60"
+                                    className={`${primaryButtonClass} w-full`}
                                 >
                                     {submitting ? (
                                         <LoaderCircle className="animate-spin" size={16} />
@@ -176,13 +177,13 @@ function AuthScreen() {
                                     setFormError(null);
                                     setMessage(null);
                                 }}
-                                className="mt-5 w-full text-center text-xs font-semibold text-[#4F6F56]"
+                                className="mt-5 w-full text-center text-[13px] font-semibold text-[#4F6F56] hover:underline"
                             >
                                 {mode === "sign-in"
                                     ? "New to ReStock? Create an account"
                                     : "Already have an account? Sign in"}
                             </button>
-                            <div className="mt-8 flex items-center justify-center gap-2 text-xs text-[#8A918A]">
+                            <div className="mt-8 flex items-center justify-center gap-2 text-[13px] text-[#8A918A]">
                                 <ShieldCheck size={12} />
                                 Secure sign-in · encrypted connection
                             </div>
@@ -238,18 +239,18 @@ function OnboardingScreen() {
             <div className="mx-auto max-w-3xl">
                 <div className="flex items-center justify-between">
                     <BrandLockup size="md" priority />
-                    <button onClick={() => void signOut()} className="text-xs font-semibold text-[#667066]">
+                    <button onClick={() => void signOut()} className="text-[13px] font-semibold text-[#667066] hover:underline">
                         Sign out
                     </button>
                 </div>
                 <form
                     onSubmit={submit}
-                    className="mt-10 rounded-[30px] border border-[#DDE5DC] bg-white p-6 shadow-[0_28px_80px_-55px_rgba(43,74,52,0.55)] sm:p-9"
+                    className="mt-10 rounded-2xl border border-[#DDE5DC] bg-white p-6 shadow-[0_28px_80px_-55px_rgba(43,74,52,0.55)] sm:p-9"
                 >
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EDF3EC] text-[#4F6F56]">
                         <Building2 size={22} />
                     </div>
-                    <p className="mt-5 text-xs font-bold tracking-[0.17em] text-[#6F9277] uppercase">
+                    <p className="mt-5 text-[11px] font-semibold tracking-[0.14em] text-[#6F9277] uppercase">
                         Business setup
                     </p>
                     <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">
@@ -276,15 +277,15 @@ function OnboardingScreen() {
                                 }`}
                             >
                                 <Icon size={18} className="text-[#4F6F56]" />
-                                <p className="mt-3 text-sm font-bold text-[#2F312F]">{label}</p>
-                                <p className="mt-1 text-xs text-[#7B817B]">{detail}</p>
+                                <p className="mt-3 text-[15px] font-semibold text-[#2F312F]">{label}</p>
+                                <p className="mt-1 text-[13px] leading-5 text-[#7B817B]">{detail}</p>
                             </button>
                         ))}
                     </div>
 
                     <div className="mt-6 grid gap-4 sm:grid-cols-2">
                         <label>
-                            <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                            <span className="mb-1.5 block text-[13px] font-medium text-[#414641]">
                                 Registered legal name
                             </span>
                             <input
@@ -293,11 +294,11 @@ function OnboardingScreen() {
                                 maxLength={160}
                                 value={legalName}
                                 onChange={(event) => setLegalName(event.target.value)}
-                                className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                className={fieldClass}
                             />
                         </label>
                         <label>
-                            <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                            <span className="mb-1.5 block text-[13px] font-medium text-[#414641]">
                                 Name shown in your dashboard
                             </span>
                             <input
@@ -306,22 +307,22 @@ function OnboardingScreen() {
                                 maxLength={80}
                                 value={displayName}
                                 onChange={(event) => setDisplayName(event.target.value)}
-                                className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                className={fieldClass}
                             />
                         </label>
                     </div>
 
                     <div className="mt-7 border-t border-[#E8ECE7] pt-6">
-                        <p className="text-xs font-bold text-[#2F312F]">
+                        <p className="text-[15px] font-semibold text-[#2F312F]">
                             Pickup and delivery contact
                         </p>
-                        <p className="mt-1 text-xs leading-5 text-[#7B817B]">
+                        <p className="mt-1 text-[13px] leading-5 text-[#7B817B]">
                             Used only by ReStock and Ninja Van. Shops and suppliers do not see each
                             other&apos;s contact details.
                         </p>
                         <div className="mt-4 grid gap-4 sm:grid-cols-2">
                             <label>
-                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                                <span className="mb-1.5 block text-[13px] font-medium text-[#414641]">
                                     Contact name
                                 </span>
                                 <input
@@ -331,11 +332,11 @@ function OnboardingScreen() {
                                     autoComplete="name"
                                     value={contactName}
                                     onChange={(event) => setContactName(event.target.value)}
-                                    className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                    className={fieldClass}
                                 />
                             </label>
                             <label>
-                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                                <span className="mb-1.5 block text-[13px] font-medium text-[#414641]">
                                     Phone number
                                 </span>
                                 <input
@@ -345,11 +346,11 @@ function OnboardingScreen() {
                                     value={phoneE164}
                                     onChange={(event) => setPhoneE164(event.target.value)}
                                     placeholder="+6591234567"
-                                    className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                    className={fieldClass}
                                 />
                             </label>
                             <label className="sm:col-span-2">
-                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                                <span className="mb-1.5 block text-[13px] font-medium text-[#414641]">
                                     {accountType === "supplier" ? "Pickup address" : "Delivery address"}
                                 </span>
                                 <input
@@ -359,11 +360,11 @@ function OnboardingScreen() {
                                     autoComplete="address-line1"
                                     value={addressLine1}
                                     onChange={(event) => setAddressLine1(event.target.value)}
-                                    className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                    className={fieldClass}
                                 />
                             </label>
                             <label>
-                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                                <span className="mb-1.5 block text-[13px] font-medium text-[#414641]">
                                     Unit / building
                                 </span>
                                 <input
@@ -371,11 +372,11 @@ function OnboardingScreen() {
                                     autoComplete="address-line2"
                                     value={addressLine2}
                                     onChange={(event) => setAddressLine2(event.target.value)}
-                                    className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                    className={fieldClass}
                                 />
                             </label>
                             <label>
-                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                                <span className="mb-1.5 block text-[13px] font-medium text-[#414641]">
                                     Singapore postal code
                                 </span>
                                 <input
@@ -385,11 +386,11 @@ function OnboardingScreen() {
                                     autoComplete="postal-code"
                                     value={postalCode}
                                     onChange={(event) => setPostalCode(event.target.value)}
-                                    className="w-full rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                    className={fieldClass}
                                 />
                             </label>
                             <label className="sm:col-span-2">
-                                <span className="mb-1.5 block text-xs font-semibold text-[#414641]">
+                                <span className="mb-1.5 block text-[13px] font-medium text-[#414641]">
                                     Pickup or delivery instructions
                                 </span>
                                 <textarea
@@ -398,7 +399,7 @@ function OnboardingScreen() {
                                     value={deliveryInstructions}
                                     onChange={(event) => setDeliveryInstructions(event.target.value)}
                                     placeholder="Loading bay, operating hours, access notes"
-                                    className="w-full resize-none rounded-xl border border-[#D7DFD5] bg-[#FAFBF9] px-4 py-3 text-sm outline-none focus:border-[#6F9277]"
+                                    className={`${fieldClass} resize-none`}
                                 />
                             </label>
                         </div>
@@ -406,7 +407,7 @@ function OnboardingScreen() {
 
                     {accountType === "supplier" ? (
                         <div className="mt-5">
-                            <p className="text-xs font-semibold text-[#414641]">Supply categories</p>
+                            <p className="text-[13px] font-medium text-[#414641]">Supply categories</p>
                             <div className="mt-2 flex flex-wrap gap-2">
                                 {supplierCategories.map((category) => {
                                     const selected = categories.includes(category);
@@ -421,7 +422,7 @@ function OnboardingScreen() {
                                                         : [...categories, category]
                                                 )
                                             }
-                                            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                                            className={`rounded-full px-3 py-1.5 text-[13px] font-medium transition ${
                                                 selected
                                                     ? "bg-[#4F6F56] text-white"
                                                     : "border border-[#DDE5DC] text-[#667066]"
@@ -436,7 +437,7 @@ function OnboardingScreen() {
                     ) : null}
 
                     {formError ? (
-                        <p role="alert" className="mt-5 rounded-xl bg-[#FFF2EF] px-3 py-2 text-xs text-[#A33A2B]">
+                        <p role="alert" className="mt-5 rounded-lg bg-[#FFF2EF] px-3.5 py-2.5 text-[13px] text-[#A33A2B]">
                             {formError}
                         </p>
                     ) : null}
@@ -444,7 +445,7 @@ function OnboardingScreen() {
                     <button
                         type="submit"
                         disabled={submitting || (accountType === "supplier" && categories.length === 0)}
-                        className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4F6F56] px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+                        className={`${primaryButtonClass} mt-7 w-full`}
                     >
                         {submitting ? <LoaderCircle className="animate-spin" size={16} /> : <ArrowRight size={16} />}
                         Create business profile
@@ -471,7 +472,7 @@ export function WorkspaceGate({
     if (organization.status !== "active") {
         return (
             <div className="flex min-h-screen items-center justify-center bg-[#F7F9F5] px-4">
-                <div className="max-w-md rounded-3xl border border-[#E3D9D4] bg-white p-8 text-center">
+                <div className="max-w-md rounded-2xl border border-[#E3D9D4] bg-white p-8 text-center">
                     <LockKeyhole className="mx-auto text-[#A45F48]" size={28} />
                     <h1 className="mt-4 text-xl font-bold text-[#2F312F]">Business account unavailable</h1>
                     <p className="mt-2 text-sm text-[#707670]">
@@ -488,7 +489,7 @@ export function WorkspaceGate({
     if (organization.accountType !== requiredRole) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-[#F7F9F5] px-4">
-                <div className="max-w-md rounded-3xl border border-[#DDE5DC] bg-white p-8 text-center">
+                <div className="max-w-md rounded-2xl border border-[#DDE5DC] bg-white p-8 text-center">
                     <ShieldCheck className="mx-auto text-[#4F6F56]" size={30} />
                     <h1 className="mt-4 text-xl font-bold text-[#2F312F]">
                         {organization.accountType === "retailer" ? "Retailer" : "Supplier"} account
