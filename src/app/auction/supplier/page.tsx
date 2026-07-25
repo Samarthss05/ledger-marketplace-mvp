@@ -14,6 +14,7 @@ import {
     Truck,
 } from "lucide-react";
 import { useAuth } from "../components/auth-context";
+import { MetricCard } from "../components/metric-card";
 import { useOrderWorkflowStore } from "../lib/order-workflow-store";
 
 function money(value: number) {
@@ -43,7 +44,7 @@ export default function SupplierDashboard() {
             <section className="overflow-hidden rounded-[30px] bg-[#365845] p-6 text-white sm:p-8">
                 <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                        <p className="text-[10px] font-bold tracking-[0.18em] text-[#CFE0D1] uppercase">
+                        <p className="text-xs font-bold tracking-[0.16em] text-[#CFE0D1] uppercase">
                             {organization?.aliasCode} · Supplier workspace
                         </p>
                         <h1 className="mt-3 text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
@@ -68,49 +69,49 @@ export default function SupplierDashboard() {
             {error ? <p role="alert" className="rounded-xl bg-[#FFF2EF] px-4 py-3 text-xs text-[#A33A2B]">{error}</p> : null}
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <Metric icon={FileText} label="Requests to quote" value={openRequests.length.toString()} />
-                <Metric icon={Package} label="Orders in progress" value={activeOrders.length.toString()} />
-                <Metric icon={Camera} label="Dispatch photos needed" value={proofRequired.length.toString()} />
-                <Metric icon={CircleDollarSign} label="Completed order value" value={money(released)} />
+                <MetricCard icon={FileText} label="Requests to quote" value={openRequests.length.toString()} />
+                <MetricCard icon={Package} label="Orders in progress" value={activeOrders.length.toString()} />
+                <MetricCard icon={Camera} label="Dispatch photos needed" value={proofRequired.length.toString()} />
+                <MetricCard icon={CircleDollarSign} label="Completed order value" value={money(released)} />
             </div>
 
             {loading ? (
                 <div className="flex justify-center py-16 text-[#6F9277]"><LoaderCircle className="animate-spin" size={24} /></div>
             ) : (
-                <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-                    <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
+                <div className="grid items-start gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+                    <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5 sm:p-6">
                         <div className="flex items-center justify-between">
-                            <div><h2 className="text-base font-bold text-[#2F312F]">Quote requests</h2><p className="mt-1 text-[10px] text-[#8A918A]">New requests and quotes you have sent</p></div>
-                            <Link href="/auction/supplier/crm" className="text-xs font-bold text-[#4F6F56]">View all</Link>
+                            <div><h2 className="text-lg font-bold text-[#2F312F]">Quote requests</h2><p className="mt-1 text-xs leading-5 text-[#7B817B]">New requests and quotes you have sent</p></div>
+                            <Link href="/auction/supplier/crm" className="inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56] hover:underline">View all <ArrowRight size={11} /></Link>
                         </div>
-                        <div className="mt-4 divide-y divide-[#EDF0EC]">
+                        <div className="mt-5 space-y-3">
                             {requests.slice(0, 5).map((request) => {
                                 const quote = myQuote(request);
                                 return (
-                                    <div key={request.id} className="flex items-center justify-between gap-4 py-4">
-                                        <div className="min-w-0"><p className="truncate text-xs font-bold text-[#2F312F]">{request.title}</p><p className="mt-1 text-[10px] text-[#8A918A]">{request.reference} · Retailer {request.retailerAlias}</p></div>
-                                        <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${quote ? "bg-[#E7F2E6] text-[#3F7048]" : "bg-[#FFF5E6] text-[#94621B]"}`}>{quote ? "Quoted" : "Respond"}</span>
-                                    </div>
+                                    <Link key={request.id} href="/auction/supplier/crm" className="flex min-h-20 items-center justify-between gap-4 rounded-2xl border border-[#EDF0EC] bg-[#FAFBF9] p-4 transition hover:border-[#D4DED2] hover:bg-[#F4F7F3]">
+                                        <div className="min-w-0"><p className="truncate text-sm font-bold text-[#2F312F]">{request.title}</p><p className="mt-1 text-xs text-[#7B817B]">{request.reference} · Retailer {request.retailerAlias}</p></div>
+                                        <div className="flex items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${quote ? "bg-[#E7F2E6] text-[#3F7048]" : "bg-[#FFF5E6] text-[#94621B]"}`}>{quote ? "Quoted" : "Respond"}</span><ArrowRight size={13} className="text-[#91A195]" /></div>
+                                    </Link>
                                 );
                             })}
                             {requests.length === 0 ? <Empty text="No quote requests yet." /> : null}
                         </div>
                     </section>
 
-                    <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5">
+                    <section className="rounded-3xl border border-[#DDE5DC] bg-white p-5 sm:p-6">
                         <div className="flex items-center justify-between">
-                            <div><h2 className="text-base font-bold text-[#2F312F]">Deliveries</h2><p className="mt-1 text-[10px] text-[#8A918A]">Photos and delivery status</p></div>
-                            <Link href="/auction/supplier/operations" className="text-xs font-bold text-[#4F6F56]">View all</Link>
+                            <div><h2 className="text-lg font-bold text-[#2F312F]">Deliveries</h2><p className="mt-1 text-xs leading-5 text-[#7B817B]">Photos and delivery status</p></div>
+                            <Link href="/auction/supplier/operations" className="inline-flex items-center gap-1 text-xs font-bold text-[#4F6F56] hover:underline">View all <ArrowRight size={11} /></Link>
                         </div>
                         <div className="mt-4 space-y-3">
                             {orders.slice(0, 4).map((order) => (
-                                <div key={order.id} className="rounded-2xl bg-[#F7F9F5] p-4">
+                                <Link key={order.id} href="/auction/supplier/operations" className="block min-h-28 rounded-2xl border border-[#EDF0EC] bg-[#FAFBF9] p-4 transition hover:border-[#D4DED2] hover:bg-[#F4F7F3]">
                                     <div className="flex items-start justify-between gap-3">
-                                        <div><p className="text-xs font-bold text-[#2F312F]">{order.productName}</p><p className="mt-1 text-[10px] text-[#8A918A]">{order.reference} · Retailer {order.retailerAlias}</p></div>
+                                        <div><p className="text-sm font-bold text-[#2F312F]">{order.productName}</p><p className="mt-1 text-xs text-[#7B817B]">{order.reference} · Retailer {order.retailerAlias}</p></div>
                                         {order.verificationStatus === "verified" ? <CheckCircle2 size={15} className="text-[#4F6F56]" /> : order.verificationStatus === "awaiting_supplier_proof" ? <Camera size={15} className="text-[#A96838]" /> : <Truck size={15} className="text-[#6F9277]" />}
                                     </div>
-                                    <p className="mt-3 text-[10px] text-[#667066]">{order.courier.lastScan}</p>
-                                </div>
+                                    <p className="mt-3 text-xs leading-5 text-[#667066]">{order.courier.lastScan}</p>
+                                </Link>
                             ))}
                             {orders.length === 0 ? <Empty text="Orders appear when a retailer chooses your quote." /> : null}
                         </div>
@@ -127,12 +128,8 @@ export default function SupplierDashboard() {
     );
 }
 
-function Metric({ icon: Icon, label, value }: { icon: typeof FileText; label: string; value: string }) {
-    return <div className="rounded-2xl border border-[#DDE5DC] bg-white p-4"><Icon size={15} className="text-[#6F9277]" /><p className="mt-3 text-xl font-bold text-[#2F312F]">{value}</p><p className="mt-0.5 text-[10px] font-semibold text-[#7B817B]">{label}</p></div>;
-}
-
 function Trust({ icon: Icon, title, body }: { icon: typeof ShieldCheck; title: string; body: string }) {
-    return <div className="flex items-start gap-3 rounded-2xl border border-[#DDE5DC] bg-white p-4"><div className="rounded-xl bg-[#EDF3EC] p-2 text-[#4F6F56]"><Icon size={15} /></div><div><p className="text-xs font-bold text-[#2F312F]">{title}</p><p className="mt-1 text-[10px] leading-5 text-[#7B817B]">{body}</p></div></div>;
+    return <div className="flex min-h-28 items-start gap-3 rounded-2xl border border-[#DDE5DC] bg-white p-5"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#EDF3EC] text-[#4F6F56]"><Icon size={18} /></div><div><p className="text-sm font-bold leading-5 text-[#2F312F]">{title}</p><p className="mt-1 text-xs leading-5 text-[#7B817B]">{body}</p></div></div>;
 }
 
 function Empty({ text }: { text: string }) {

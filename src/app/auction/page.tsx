@@ -13,7 +13,7 @@ export default function AuctionLanding() {
                 <Link href="/auction" aria-label="ReStock by Ledger home">
                     <BrandLockup size="lg" priority />
                 </Link>
-                <span className="hidden rounded-full border border-[#DDE5DC] bg-white/75 px-3 py-1.5 text-[10px] font-semibold tracking-[0.16em] text-[#4F6F56] uppercase sm:inline-flex">
+                <span className="hidden rounded-full border border-[#DDE5DC] bg-white/75 px-3 py-1.5 text-xs font-semibold tracking-[0.16em] text-[#4F6F56] uppercase sm:inline-flex">
                     For retailers and suppliers
                 </span>
             </header>
@@ -72,7 +72,7 @@ export default function AuctionLanding() {
                                         <Store size={24} className="text-white" />
                                     </div>
 
-                                    <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#6F9277] uppercase">Retailer account</p>
+                                    <p className="mb-2 text-xs font-bold tracking-[0.18em] text-[#6F9277] uppercase">Retailer account</p>
                                     <h2 className="mb-2 text-xl font-bold text-[#2F312F]">Order stock for my shop</h2>
                                     <p className="mb-6 text-sm leading-relaxed text-[#666B66]">
                                         Choose what you need, compare supplier quotes, and follow
@@ -119,7 +119,7 @@ export default function AuctionLanding() {
                                         <Truck size={24} className="text-white" />
                                     </div>
 
-                                    <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#6F9277] uppercase">Supplier account</p>
+                                    <p className="mb-2 text-xs font-bold tracking-[0.18em] text-[#6F9277] uppercase">Supplier account</p>
                                     <h2 className="mb-2 text-xl font-bold text-[#2F312F]">Supply products to retailers</h2>
                                     <p className="mb-6 text-sm leading-relaxed text-[#666B66]">
                                         Receive order requests, send quotes, and manage every
@@ -166,7 +166,7 @@ export default function AuctionLanding() {
                     ].map((stat) => (
                         <div key={stat.label} className="text-center">
                             <p className="text-lg font-bold text-[#2F312F]">{stat.value}</p>
-                            <p className="text-[10px] tracking-wide text-[#8A918A] uppercase">{stat.label}</p>
+                            <p className="text-xs tracking-wide text-[#8A918A] uppercase">{stat.label}</p>
                         </div>
                     ))}
                 </motion.div>

@@ -182,7 +182,7 @@ function AuthScreen() {
                                     ? "New to ReStock? Create an account"
                                     : "Already have an account? Sign in"}
                             </button>
-                            <div className="mt-8 flex items-center justify-center gap-2 text-[10px] text-[#8A918A]">
+                            <div className="mt-8 flex items-center justify-center gap-2 text-xs text-[#8A918A]">
                                 <ShieldCheck size={12} />
                                 Secure sign-in · encrypted connection
                             </div>
@@ -249,7 +249,7 @@ function OnboardingScreen() {
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EDF3EC] text-[#4F6F56]">
                         <Building2 size={22} />
                     </div>
-                    <p className="mt-5 text-[10px] font-bold tracking-[0.17em] text-[#6F9277] uppercase">
+                    <p className="mt-5 text-xs font-bold tracking-[0.17em] text-[#6F9277] uppercase">
                         Business setup
                     </p>
                     <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">
@@ -315,7 +315,7 @@ function OnboardingScreen() {
                         <p className="text-xs font-bold text-[#2F312F]">
                             Pickup and delivery contact
                         </p>
-                        <p className="mt-1 text-[10px] leading-5 text-[#7B817B]">
+                        <p className="mt-1 text-xs leading-5 text-[#7B817B]">
                             Used only by ReStock and Ninja Van. Shops and suppliers do not see each
                             other&apos;s contact details.
                         </p>

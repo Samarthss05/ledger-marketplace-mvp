@@ -19,6 +19,7 @@ import {
     Truck,
     Users,
 } from "lucide-react";
+import { MetricCard } from "../../components/metric-card";
 import { retailerRequestStatus } from "../../lib/display-copy";
 import {
     type SourcingRequest,
@@ -87,7 +88,7 @@ export default function RequestsPage() {
         <div className="mx-auto max-w-7xl space-y-6 px-4 py-7 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-[10px] font-bold tracking-[0.17em] text-[#6F9277] uppercase">
+                    <p className="text-xs font-bold tracking-[0.16em] text-[#6F9277] uppercase">
                         Supplier quotes
                     </p>
                     <h1 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">
@@ -128,10 +129,10 @@ export default function RequestsPage() {
             ) : null}
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <Metric icon={FileText} label="Requests in progress" value={requests.filter((request) => ["sent", "quoted"].includes(request.status)).length.toString()} />
-                <Metric icon={Sparkles} label="Requests with quotes" value={requests.filter((request) => request.status === "quoted").length.toString()} />
-                <Metric icon={Users} label="Suppliers invited" value={new Set(requests.flatMap((request) => request.selectedSupplierIds)).size.toString()} />
-                <Metric icon={CircleDollarSign} label="Estimated order value" value={money(requests.filter((request) => ["sent", "quoted"].includes(request.status)).reduce((sum, request) => sum + targetValue(request), 0))} />
+                <MetricCard icon={FileText} label="Requests in progress" value={requests.filter((request) => ["sent", "quoted"].includes(request.status)).length.toString()} />
+                <MetricCard icon={Sparkles} label="Requests with quotes" value={requests.filter((request) => request.status === "quoted").length.toString()} />
+                <MetricCard icon={Users} label="Suppliers invited" value={new Set(requests.flatMap((request) => request.selectedSupplierIds)).size.toString()} />
+                <MetricCard icon={CircleDollarSign} label="Estimated order value" value={money(requests.filter((request) => ["sent", "quoted"].includes(request.status)).reduce((sum, request) => sum + targetValue(request), 0))} />
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -191,16 +192,16 @@ export default function RequestsPage() {
                                                     <h2 className="text-sm font-bold text-[#2F312F]">{request.title}</h2>
                                                     <Status status={request.status} />
                                                     {request.priority === "urgent" ? (
-                                                        <span className="rounded-full bg-[#FFF0E8] px-2 py-0.5 text-[9px] font-bold text-[#B75E28]">Urgent</span>
+                                                        <span className="rounded-full bg-[#FFF0E8] px-2 py-0.5 text-[11px] font-bold text-[#B75E28]">Urgent</span>
                                                     ) : null}
                                                 </div>
-                                                <p className="mt-1 text-[10px] text-[#8A918A]">
+                                                <p className="mt-1 text-xs text-[#8A918A]">
                                                     {request.reference} · {request.lines.length} items · delivery by{" "}
                                                     {new Date(`${request.deliveryDate}T12:00:00`).toLocaleDateString("en-SG", { dateStyle: "medium" })}
                                                 </p>
                                                 <div className="mt-3 flex flex-wrap gap-2">
                                                     {request.lines.map((line) => (
-                                                        <span key={line.id} className="rounded-lg bg-[#F4F7F3] px-2 py-1 text-[10px] text-[#667066]">
+                                                        <span key={line.id} className="rounded-lg bg-[#F4F7F3] px-2 py-1 text-xs text-[#667066]">
                                                             {line.productName} · {line.quantity}
                                                         </span>
                                                     ))}
@@ -209,11 +210,11 @@ export default function RequestsPage() {
                                         </div>
                                         <div className="flex flex-wrap items-center gap-5">
                                             <div>
-                                                <p className="text-[9px] text-[#8A918A]">Budget</p>
+                                                <p className="text-[11px] text-[#8A918A]">Budget</p>
                                                 <p className="text-sm font-bold text-[#2F312F]">{money(targetValue(request))}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[9px] text-[#8A918A]">Quotes</p>
+                                                <p className="text-[11px] text-[#8A918A]">Quotes</p>
                                                 <p className="text-sm font-bold text-[#4F6F56]">{request.quotes.length} / {request.selectedSupplierIds.length}</p>
                                             </div>
                                             <button
@@ -256,7 +257,7 @@ export default function RequestsPage() {
                                                             <p className="text-xs font-bold text-[#2F312F]">
                                                                 Best overall match: {ranked[0].supplierAlias}
                                                             </p>
-                                                            <p className="mt-1 text-[10px] leading-5 text-[#667066]">
+                                                            <p className="mt-1 text-xs leading-5 text-[#667066]">
                                                                 We compare total price and delivery date. Check the full quote before choosing.
                                                             </p>
                                                         </div>
@@ -298,16 +299,6 @@ export default function RequestsPage() {
     );
 }
 
-function Metric({ icon: Icon, label, value }: { icon: typeof FileText; label: string; value: string }) {
-    return (
-        <div className="rounded-2xl border border-[#DDE5DC] bg-white p-4">
-            <Icon size={15} className="text-[#6F9277]" />
-            <p className="mt-3 text-xl font-bold text-[#2F312F]">{value}</p>
-            <p className="text-[10px] font-semibold text-[#7B817B]">{label}</p>
-        </div>
-    );
-}
-
 function Status({ status }: { status: SourcingRequest["status"] }) {
     const style =
         status === "awarded"
@@ -317,7 +308,7 @@ function Status({ status }: { status: SourcingRequest["status"] }) {
               : status === "sent"
                 ? "bg-[#FFF5E6] text-[#94621B]"
                 : "bg-[#F1F2F0] text-[#747A74]";
-    return <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${style}`}>{retailerRequestStatus(status)}</span>;
+    return <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${style}`}>{retailerRequestStatus(status)}</span>;
 }
 
 function QuoteCard({
@@ -338,22 +329,22 @@ function QuoteCard({
     return (
         <div className={`relative rounded-2xl border bg-white p-4 ${recommended ? "border-[#6F9277]" : "border-[#DDE5DC]"}`}>
             {recommended ? (
-                <span className="absolute -top-2 left-4 inline-flex items-center gap-1 rounded-full bg-[#4F6F56] px-2 py-1 text-[8px] font-bold text-white">
+                <span className="absolute -top-2 left-4 inline-flex items-center gap-1 rounded-full bg-[#4F6F56] px-2 py-1 text-[11px] font-bold text-white">
                     <Sparkles size={8} /> Best overall match
                 </span>
             ) : null}
             <div className="mt-1 flex items-start justify-between gap-3">
                 <div>
                     <p className="text-xs font-bold text-[#2F312F]">{quote.supplierAlias}</p>
-                    <p className="mt-1 text-[10px] text-[#8A918A]">{quote.reference} · {quote.paymentTerms}</p>
+                    <p className="mt-1 text-xs text-[#8A918A]">{quote.reference} · {quote.paymentTerms}</p>
                 </div>
                 <div className="rounded-xl bg-[#EDF3EC] px-2.5 py-2 text-center">
-                    <p className="text-[8px] text-[#6F9277]">Overall match</p>
+                    <p className="text-[11px] text-[#6F9277]">Overall match</p>
                     <p className="text-sm font-bold text-[#4F6F56]">{quote.score}</p>
                 </div>
             </div>
             <p className="mt-4 text-xl font-bold text-[#2F312F]">{money(quote.totalPrice)}</p>
-            <div className="mt-3 space-y-2 text-[10px] text-[#667066]">
+            <div className="mt-3 space-y-2 text-xs text-[#667066]">
                 <p className="flex items-center gap-2"><Truck size={11} /> Delivery {new Date(`${quote.deliveryDate}T12:00:00`).toLocaleDateString("en-SG", { dateStyle: "medium" })}</p>
                 <p className="flex items-center gap-2"><Clock3 size={11} /> {quote.deliveryDays} day lead time</p>
             </div>

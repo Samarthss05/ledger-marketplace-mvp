@@ -146,7 +146,7 @@ export default function CreateOrderPage() {
             </Link>
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-[10px] font-bold tracking-[0.17em] text-[#6F9277] uppercase">
+                    <p className="text-xs font-bold tracking-[0.17em] text-[#6F9277] uppercase">
                         New order
                     </p>
                     <h1 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">
@@ -261,7 +261,7 @@ export default function CreateOrderPage() {
                                                 <span className="block text-xs font-semibold text-[#2F312F]">
                                                     {product.name}
                                                 </span>
-                                                <span className="text-[10px] text-[#8A918A]">
+                                                <span className="text-xs text-[#8A918A]">
                                                     {product.category} · {product.barcode}
                                                 </span>
                                             </span>
@@ -287,10 +287,10 @@ export default function CreateOrderPage() {
                                         <p className="text-xs font-bold text-[#2F312F]">
                                             {line.productName}
                                         </p>
-                                        <p className="mt-1 text-[10px] text-[#8A918A]">{line.category}</p>
+                                        <p className="mt-1 text-xs text-[#8A918A]">{line.category}</p>
                                     </div>
                                     <label>
-                                        <span className="mb-1 block text-[10px] text-[#777E77]">Quantity</span>
+                                        <span className="mb-1 block text-xs text-[#777E77]">Quantity</span>
                                         <input
                                             type="number"
                                             min={1}
@@ -304,7 +304,7 @@ export default function CreateOrderPage() {
                                         />
                                     </label>
                                     <label>
-                                        <span className="mb-1 block text-[10px] text-[#777E77]">
+                                        <span className="mb-1 block text-xs text-[#777E77]">
                                             Budget per unit
                                         </span>
                                         <input
@@ -457,12 +457,12 @@ export default function CreateOrderPage() {
                                                             {supplier.aliasCode}
                                                         </p>
                                                         {index === 0 ? (
-                                                            <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F1E7] px-2 py-0.5 text-[8px] font-bold text-[#3F7048]">
+                                                            <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F1E7] px-2 py-0.5 text-[11px] font-bold text-[#3F7048]">
                                                                 <Sparkles size={8} /> Best match
                                                             </span>
                                                         ) : null}
                                                     </div>
-                                                    <p className="mt-1 text-[10px] text-[#8A918A]">
+                                                    <p className="mt-1 text-xs text-[#8A918A]">
                                                         {supplier.categoryTags.join(" · ") || "General supply"}
                                                     </p>
                                                 </div>
@@ -476,7 +476,7 @@ export default function CreateOrderPage() {
                                                     <Check size={13} />
                                                 </span>
                                             </div>
-                                            <div className="mt-4 flex gap-4 text-[10px] text-[#667066]">
+                                            <div className="mt-4 flex gap-4 text-xs text-[#667066]">
                                                 <span>
                                                     Product match <b className="text-[#2F312F]">{score}</b>
                                                 </span>
@@ -579,9 +579,9 @@ export default function CreateOrderPage() {
 function Insight({ label, value, detail }: { label: string; value: string; detail: string }) {
     return (
         <div className="rounded-2xl border border-[#DDE5DC] p-4">
-            <p className="text-[10px] font-semibold text-[#7B817B]">{label}</p>
+            <p className="text-xs font-semibold text-[#7B817B]">{label}</p>
             <p className="mt-1 text-xl font-bold text-[#2F312F]">{value}</p>
-            <p className="mt-1 text-[10px] text-[#8A918A]">{detail}</p>
+            <p className="mt-1 text-xs text-[#8A918A]">{detail}</p>
         </div>
     );
 }
@@ -605,7 +605,7 @@ function ReviewRow({ ok, title, detail }: { ok: boolean; title: string; detail: 
 function Summary({ label, value }: { label: string; value: string }) {
     return (
         <div className="rounded-2xl border border-[#E1E7DF] p-4">
-            <p className="text-[10px] font-semibold text-[#8A918A]">{label}</p>
+            <p className="text-xs font-semibold text-[#8A918A]">{label}</p>
             <p className="mt-1 text-sm font-bold text-[#2F312F]">{value}</p>
         </div>
     );

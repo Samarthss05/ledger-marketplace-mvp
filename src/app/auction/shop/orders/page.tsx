@@ -7,6 +7,7 @@ import {
     ArrowRight,
     Camera,
     CheckCircle2,
+    CircleDollarSign,
     Clock3,
     FileWarning,
     ImageIcon,
@@ -18,6 +19,7 @@ import {
     Truck,
     X,
 } from "lucide-react";
+import { MetricCard } from "../../components/metric-card";
 import {
     type DeliveryProof,
     type FulfillmentOrder,
@@ -153,7 +155,7 @@ export default function OrdersPage() {
         <div className="mx-auto max-w-7xl space-y-6 px-4 py-7 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-[10px] font-bold tracking-[0.17em] text-[#6F9277] uppercase">
+                    <p className="text-xs font-bold tracking-[0.16em] text-[#6F9277] uppercase">
                         Deliveries
                     </p>
                     <h1 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">
@@ -172,10 +174,10 @@ export default function OrdersPage() {
             {error ? <p role="alert" className="rounded-xl bg-[#FFF2EF] px-4 py-3 text-xs text-[#A33A2B]">{error}</p> : null}
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <Metric label="Total orders" value={orders.length.toString()} active={filter === "all"} onClick={() => selectFilter("all")} />
-                <Metric label="In delivery" value={orders.filter((order) => ["awaiting_courier_pickup", "in_transit"].includes(order.verificationStatus)).length.toString()} active={filter === "active"} onClick={() => selectFilter("active")} />
-                <Metric label="Ready to confirm" value={orders.filter((order) => order.verificationStatus === "awaiting_shop_verification").length.toString()} active={filter === "confirm"} onClick={() => selectFilter("confirm")} />
-                <Metric label="Value awaiting confirmation" value={money(orders.filter((order) => ["held", "under_review"].includes(order.payoutStatus)).reduce((sum, order) => sum + order.totalPrice, 0))} active={filter === "pending"} onClick={() => selectFilter("pending")} />
+                <MetricCard icon={Package} label="Total orders" value={orders.length.toString()} active={filter === "all"} onClick={() => selectFilter("all")} />
+                <MetricCard icon={Truck} label="In delivery" value={orders.filter((order) => ["awaiting_courier_pickup", "in_transit"].includes(order.verificationStatus)).length.toString()} active={filter === "active"} onClick={() => selectFilter("active")} />
+                <MetricCard icon={Camera} label="Ready to confirm" value={orders.filter((order) => order.verificationStatus === "awaiting_shop_verification").length.toString()} active={filter === "confirm"} onClick={() => selectFilter("confirm")} />
+                <MetricCard icon={CircleDollarSign} label="Value awaiting confirmation" value={money(orders.filter((order) => ["held", "under_review"].includes(order.payoutStatus)).reduce((sum, order) => sum + order.totalPrice, 0))} active={filter === "pending"} onClick={() => selectFilter("pending")} />
             </div>
 
             {loading ? (
@@ -214,7 +216,7 @@ export default function OrdersPage() {
                     <div className="max-h-[95vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-7">
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <p className="text-[10px] font-bold tracking-[0.15em] text-[#6F9277] uppercase">Confirm delivery</p>
+                                <p className="text-xs font-bold tracking-[0.15em] text-[#6F9277] uppercase">Confirm delivery</p>
                                 <h2 className="mt-1 text-xl font-bold text-[#2F312F]">{verifyOrder.reference}</h2>
                                 <p className="mt-1 text-xs text-[#7B817B]">Check what arrived against the supplier&apos;s dispatch photo.</p>
                             </div>
@@ -231,11 +233,11 @@ export default function OrdersPage() {
                                         // eslint-disable-next-line @next/next/no-img-element
                                         <img src={photo.previewUrl} alt="Delivery photo preview" className="h-44 w-full object-cover" />
                                     ) : (
-                                        <span className="text-center text-[#7B837B]"><Camera size={22} className="mx-auto" /><span className="mt-2 block text-[10px]">Take or choose a clear photo</span></span>
+                                        <span className="text-center text-[#7B837B]"><Camera size={22} className="mx-auto" /><span className="mt-2 block text-xs">Take or choose a clear photo</span></span>
                                     )}
                                     <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" onChange={(event) => void choosePhoto(event.target.files?.[0])} />
                                 </label>
-                                {photoError ? <p className="mt-2 text-[10px] text-[#A33A2B]">{photoError}</p> : null}
+                                {photoError ? <p className="mt-2 text-xs text-[#A33A2B]">{photoError}</p> : null}
                             </div>
                         </div>
 
@@ -278,25 +280,6 @@ export default function OrdersPage() {
     );
 }
 
-function Metric({ label, value, active, onClick }: { label: string; value: string; active: boolean; onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            aria-pressed={active}
-            className={`group rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#AFC2B1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6F9277] ${
-                active ? "border-[#9DB29F] bg-[#F3F7F2]" : "border-[#DDE5DC] bg-white"
-            }`}
-        >
-            <div className="flex items-center justify-between">
-                <p className="text-xl font-bold text-[#2F312F]">{value}</p>
-                <ArrowRight size={13} className="text-[#B0BBB1] transition group-hover:translate-x-0.5 group-hover:text-[#4F6F56]" />
-            </div>
-            <p className="mt-1 text-[10px] font-semibold text-[#7B817B]">{label}</p>
-        </button>
-    );
-}
-
 function OrderCard({ order, focused, onVerify }: { order: FulfillmentOrder; focused: boolean; onVerify: () => void }) {
     return (
         <article
@@ -315,17 +298,17 @@ function OrderCard({ order, focused, onVerify }: { order: FulfillmentOrder; focu
                             <h2 className="text-sm font-bold text-[#2F312F]">{order.productName}</h2>
                             <OrderStatus status={order.verificationStatus} />
                         </div>
-                        <p className="mt-1 text-[10px] text-[#8A918A]">{order.reference} · {order.supplierAlias} · {order.quantity} units</p>
+                        <p className="mt-1 text-xs text-[#8A918A]">{order.reference} · {order.supplierAlias} · {order.quantity} units</p>
                         <p className="mt-3 text-sm font-bold text-[#2F312F]">{money(order.totalPrice)}</p>
                     </div>
                 </div>
                 <div className="min-w-72 rounded-2xl bg-[#F7F9F5] p-4">
                     <div className="flex items-center justify-between">
                         <span className="inline-flex items-center gap-2 text-xs font-bold text-[#2F312F]"><Truck size={14} className="text-[#4F6F56]" /> Ninja Van</span>
-                        <span className="text-[9px] font-semibold text-[#6F9277]">{order.courier.trackingId ?? "Booking pending"}</span>
+                        <span className="text-[11px] font-semibold text-[#6F9277]">{order.courier.trackingId ?? "Booking pending"}</span>
                     </div>
-                    <p className="mt-2 text-[10px] text-[#667066]">{order.courier.lastScan}</p>
-                    <p className="mt-1 text-[9px] text-[#9AA09A]">{new Date(order.courier.lastScanAt).toLocaleString("en-SG", { dateStyle: "medium", timeStyle: "short" })}</p>
+                    <p className="mt-2 text-xs text-[#667066]">{order.courier.lastScan}</p>
+                    <p className="mt-1 text-[11px] text-[#9AA09A]">{new Date(order.courier.lastScanAt).toLocaleString("en-SG", { dateStyle: "medium", timeStyle: "short" })}</p>
                 </div>
             </div>
 
@@ -337,7 +320,7 @@ function OrderCard({ order, focused, onVerify }: { order: FulfillmentOrder; focu
                             <span className="mt-1.5 h-2 w-2 rounded-full bg-[#6F9277]" />
                             <div>
                                 <p className="text-xs font-semibold text-[#414641]">{copy.title}</p>
-                                <p className="mt-0.5 text-[10px] text-[#7B817B]">{copy.detail}</p>
+                                <p className="mt-0.5 text-xs text-[#7B817B]">{copy.detail}</p>
                             </div>
                         </div>;
                     })}
@@ -348,13 +331,13 @@ function OrderCard({ order, focused, onVerify }: { order: FulfillmentOrder; focu
                     ) : order.dispute ? (
                         <div className="rounded-2xl bg-[#FFF5EC] p-4">
                             <p className="flex items-center gap-2 text-xs font-bold text-[#765031]"><AlertTriangle size={14} /> {order.dispute.reference}</p>
-                            <p className="mt-2 text-[10px] leading-5 text-[#765F4C]">{order.dispute.automatedAssessment}</p>
-                            <p className="mt-2 text-[9px] font-bold uppercase text-[#A66A3A]">{disputeStatusLabel(order.dispute.status)}</p>
+                            <p className="mt-2 text-xs leading-5 text-[#765F4C]">{order.dispute.automatedAssessment}</p>
+                            <p className="mt-2 text-[11px] font-bold uppercase text-[#A66A3A]">{disputeStatusLabel(order.dispute.status)}</p>
                         </div>
                     ) : order.verificationStatus === "verified" ? (
-                        <div className="rounded-2xl bg-[#EDF6EC] p-4"><p className="flex items-center gap-2 text-xs font-bold text-[#3F7048]"><ShieldCheck size={14} /> Order completed</p><p className="mt-1 text-[10px] text-[#607460]">You confirmed the delivery. Payment status was updated.</p></div>
+                        <div className="rounded-2xl bg-[#EDF6EC] p-4"><p className="flex items-center gap-2 text-xs font-bold text-[#3F7048]"><ShieldCheck size={14} /> Order completed</p><p className="mt-1 text-xs text-[#607460]">You confirmed the delivery. Payment status was updated.</p></div>
                     ) : (
-                        <div className="rounded-2xl bg-[#F4F6F3] p-4"><p className="flex items-center gap-2 text-xs font-bold text-[#5E685E]"><Clock3 size={14} /> No action needed</p><p className="mt-1 text-[10px] text-[#7B817B]">We&apos;ll notify you when the order is ready to confirm.</p></div>
+                        <div className="rounded-2xl bg-[#F4F6F3] p-4"><p className="flex items-center gap-2 text-xs font-bold text-[#5E685E]"><Clock3 size={14} /> No action needed</p><p className="mt-1 text-xs text-[#7B817B]">We&apos;ll notify you when the order is ready to confirm.</p></div>
                     )}
                 </div>
             </div>
@@ -373,12 +356,12 @@ function ProofCard({ title, proof }: { title: string; proof?: DeliveryProof }) {
             ) : (
                 <div className="mt-3 flex h-44 items-center justify-center rounded-xl bg-[#F4F6F3] text-[#9AA09A]"><ImageIcon size={22} /></div>
             )}
-            <div className="mt-3 flex items-center justify-between text-[10px] text-[#667066]"><span>{proof?.quantity ?? "—"} units</span><span className="inline-flex items-center gap-1"><LockKeyhole size={10} /> Private photo</span></div>
+            <div className="mt-3 flex items-center justify-between text-xs text-[#667066]"><span>{proof?.quantity ?? "—"} units</span><span className="inline-flex items-center gap-1"><LockKeyhole size={10} /> Private photo</span></div>
         </div>
     );
 }
 
 function OrderStatus({ status }: { status: FulfillmentOrder["verificationStatus"] }) {
     const style = status === "verified" ? "bg-[#E7F2E6] text-[#3F7048]" : status === "disputed" ? "bg-[#FFF0E8] text-[#A4582A]" : status === "awaiting_shop_verification" ? "bg-[#EDF0FA] text-[#4A5D92]" : "bg-[#F1F2F0] text-[#666B66]";
-    return <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${style}`}>{retailerOrderStatus(status)}</span>;
+    return <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${style}`}>{retailerOrderStatus(status)}</span>;
 }

@@ -13,6 +13,7 @@ import {
     ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "../../components/auth-context";
+import { MetricCard } from "../../components/metric-card";
 import { supplierRequestStatus } from "../../lib/display-copy";
 import {
     type SourcingRequest,
@@ -87,7 +88,7 @@ export default function SupplierRequestsPage() {
     return (
         <div className="mx-auto max-w-7xl space-y-6 px-4 py-7 sm:px-6 lg:px-8">
             <div>
-                <p className="text-[10px] font-bold tracking-[0.17em] text-[#6F9277] uppercase">Sales</p>
+                <p className="text-xs font-bold tracking-[0.16em] text-[#6F9277] uppercase">Sales</p>
                 <h1 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#2F312F]">Quote requests</h1>
                 <p className="mt-2 text-sm text-[#707670]">Review each order and send your best price and delivery date.</p>
             </div>
@@ -96,10 +97,10 @@ export default function SupplierRequestsPage() {
             {error ? <p role="alert" className="rounded-xl bg-[#FFF2EF] px-4 py-3 text-xs text-[#A33A2B]">{error}</p> : null}
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <Metric icon={FileText} label="Total requests" value={requests.length.toString()} />
-                <Metric icon={Clock3} label="Need your quote" value={requests.filter((request) => !myQuote(request) && ["sent", "quoted"].includes(request.status)).length.toString()} />
-                <Metric icon={Send} label="Quotes sent" value={requests.filter((request) => myQuote(request)).length.toString()} />
-                <Metric icon={CheckCircle2} label="Orders won" value={requests.filter((request) => request.awardedQuoteId === myQuote(request)?.id).length.toString()} />
+                <MetricCard icon={FileText} label="Total requests" value={requests.length.toString()} />
+                <MetricCard icon={Clock3} label="Need your quote" value={requests.filter((request) => !myQuote(request) && ["sent", "quoted"].includes(request.status)).length.toString()} />
+                <MetricCard icon={Send} label="Quotes sent" value={requests.filter((request) => myQuote(request)).length.toString()} />
+                <MetricCard icon={CheckCircle2} label="Orders won" value={requests.filter((request) => request.awardedQuoteId === myQuote(request)?.id).length.toString()} />
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -130,28 +131,28 @@ export default function SupplierRequestsPage() {
                                         <div>
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <h2 className="text-sm font-bold text-[#2F312F]">{request.title}</h2>
-                                                <span className="rounded-full bg-[#F1F5F0] px-2 py-0.5 text-[9px] font-bold text-[#5B705F]">{supplierRequestStatus(request.status)}</span>
-                                                {won ? <span className="rounded-full bg-[#E7F2E6] px-2 py-0.5 text-[9px] font-bold text-[#3F7048]">Your quote was selected</span> : null}
+                                                <span className="rounded-full bg-[#F1F5F0] px-2 py-0.5 text-[11px] font-bold text-[#5B705F]">{supplierRequestStatus(request.status)}</span>
+                                                {won ? <span className="rounded-full bg-[#E7F2E6] px-2 py-0.5 text-[11px] font-bold text-[#3F7048]">Your quote was selected</span> : null}
                                             </div>
-                                            <p className="mt-1 text-[10px] text-[#8A918A]">{request.reference} · Retailer {request.retailerAlias} · delivery by {new Date(`${request.deliveryDate}T12:00:00`).toLocaleDateString("en-SG", { dateStyle: "medium" })}</p>
+                                            <p className="mt-1 text-xs text-[#8A918A]">{request.reference} · Retailer {request.retailerAlias} · delivery by {new Date(`${request.deliveryDate}T12:00:00`).toLocaleDateString("en-SG", { dateStyle: "medium" })}</p>
                                             <div className="mt-3 flex flex-wrap gap-2">
-                                                {request.lines.map((line) => <span key={line.id} className="rounded-lg bg-[#F4F7F3] px-2 py-1 text-[10px] text-[#667066]">{line.productName} · {line.quantity} units</span>)}
+                                                {request.lines.map((line) => <span key={line.id} className="rounded-lg bg-[#F4F7F3] px-2 py-1 text-xs text-[#667066]">{line.productName} · {line.quantity} units</span>)}
                                             </div>
-                                            {request.notes ? <p className="mt-3 text-[10px] leading-5 text-[#707670]">Receiving: {request.notes}</p> : null}
+                                            {request.notes ? <p className="mt-3 text-xs leading-5 text-[#707670]">Receiving: {request.notes}</p> : null}
                                         </div>
                                     </div>
                                     <div className="min-w-64 rounded-2xl bg-[#F7F9F5] p-4">
                                         {quote ? (
                                             <>
-                                                <p className="text-[9px] font-bold text-[#6F9277] uppercase">Your quote · {quote.reference}</p>
+                                                <p className="text-[11px] font-bold text-[#6F9277] uppercase">Your quote · {quote.reference}</p>
                                                 <p className="mt-2 text-xl font-bold text-[#2F312F]">{money(quote.totalPrice)}</p>
-                                                <p className="mt-1 text-[10px] text-[#7B817B]">{quote.deliveryDays} days · {quote.paymentTerms}</p>
+                                                <p className="mt-1 text-xs text-[#7B817B]">{quote.deliveryDays} days · {quote.paymentTerms}</p>
                                             </>
                                         ) : (
                                             <>
-                                                <p className="text-[9px] font-bold text-[#6F9277] uppercase">Retailer budget</p>
+                                                <p className="text-[11px] font-bold text-[#6F9277] uppercase">Retailer budget</p>
                                                 <p className="mt-2 text-xl font-bold text-[#2F312F]">{money(request.lines.reduce((sum, line) => sum + line.targetPrice * line.quantity, 0))}</p>
-                                                <p className="mt-1 text-[10px] text-[#7B817B]">Maximum requested total</p>
+                                                <p className="mt-1 text-xs text-[#7B817B]">Maximum requested total</p>
                                             </>
                                         )}
                                         {!closed ? <button type="button" onClick={() => openQuote(request)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#365845] px-3 py-2.5 text-xs font-bold text-white"><CircleDollarSign size={13} /> {quote ? "Update quote" : "Prepare quote"}</button> : null}
@@ -169,7 +170,7 @@ export default function SupplierRequestsPage() {
                 <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#142016]/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
                     <div className="w-full max-w-xl rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-7">
                         <div className="flex items-start justify-between gap-3">
-                            <div><p className="text-[10px] font-bold tracking-[0.15em] text-[#6F9277] uppercase">Send your quote</p><h2 className="mt-1 text-xl font-bold text-[#2F312F]">{quoteRequest.reference}</h2><p className="mt-1 text-xs text-[#7B817B]">Confirm your price, delivery time, and payment terms.</p></div>
+                            <div><p className="text-xs font-bold tracking-[0.15em] text-[#6F9277] uppercase">Send your quote</p><h2 className="mt-1 text-xl font-bold text-[#2F312F]">{quoteRequest.reference}</h2><p className="mt-1 text-xs text-[#7B817B]">Confirm your price, delivery time, and payment terms.</p></div>
                             <button type="button" onClick={() => setQuoteRequest(null)} className="text-xs font-semibold text-[#7B817B]">Cancel</button>
                         </div>
                         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -185,8 +186,4 @@ export default function SupplierRequestsPage() {
             ) : null}
         </div>
     );
-}
-
-function Metric({ icon: Icon, label, value }: { icon: typeof FileText; label: string; value: string }) {
-    return <div className="rounded-2xl border border-[#DDE5DC] bg-white p-4"><Icon size={15} className="text-[#6F9277]" /><p className="mt-3 text-xl font-bold text-[#2F312F]">{value}</p><p className="mt-1 text-[10px] font-semibold text-[#7B817B]">{label}</p></div>;
 }

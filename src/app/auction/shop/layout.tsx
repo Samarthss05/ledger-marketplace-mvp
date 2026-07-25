@@ -44,7 +44,7 @@ function ShopShell({ children }: { children: React.ReactNode }) {
                             </Link>
                             <div className="hidden items-center gap-1.5 rounded-lg bg-[#EDF3EC] px-2.5 py-1 sm:flex">
                                 <Store size={12} className="text-[#4F6F56]" />
-                                <span className="text-[9px] font-bold tracking-wide text-[#4F6F56] uppercase">
+                                <span className="text-[11px] font-bold tracking-wide text-[#4F6F56] uppercase">
                                     Retailer
                                 </span>
                             </div>
@@ -69,14 +69,14 @@ function ShopShell({ children }: { children: React.ReactNode }) {
 
                         <div className="flex items-center gap-2">
                             <div className="hidden items-center gap-2 border-l border-[#E5E5E0] pl-3 sm:flex">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#4F6F56] text-[10px] font-bold text-white">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#4F6F56] text-xs font-bold text-white">
                                     {initials}
                                 </div>
                                 <div className="max-w-36">
                                     <p className="truncate text-xs font-semibold text-[#4A514A]">
                                         {organization?.displayName}
                                     </p>
-                                    <p className="text-[9px] text-[#8A918A]">{organization?.aliasCode}</p>
+                                    <p className="text-[11px] text-[#8A918A]">{organization?.aliasCode}</p>
                                 </div>
                             </div>
                             <button
