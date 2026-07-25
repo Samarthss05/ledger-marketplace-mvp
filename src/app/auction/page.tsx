@@ -1,11 +1,43 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Store, Truck, ArrowRight, Sparkles, Bot, Shield, FileText } from "lucide-react";
+import {
+    Store,
+    Truck,
+    ArrowRight,
+    Sparkles,
+    Bot,
+    Shield,
+    FileText,
+    LoaderCircle,
+} from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BrandLockup } from "@/components/brand-lockup";
+import { type AccountType, useAuth } from "./components/auth-context";
+import { demoAccounts } from "./lib/demo-accounts";
 
 export default function AuctionLanding() {
+    const router = useRouter();
+    const { signIn } = useAuth();
+    const [openingDemo, setOpeningDemo] = useState<AccountType | null>(null);
+    const [demoError, setDemoError] = useState<string | null>(null);
+
+    const openDemo = async (accountType: AccountType) => {
+        const account = demoAccounts[accountType];
+        setOpeningDemo(accountType);
+        setDemoError(null);
+
+        try {
+            await signIn(account.email, account.password);
+            router.push(account.destination);
+        } catch {
+            setDemoError("The demo workspace could not be opened. Please try again.");
+            setOpeningDemo(null);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(111,146,119,0.13),transparent_30%),linear-gradient(145deg,#FAFBF8_0%,#FFFFFF_48%,#EDF3EC_100%)] flex flex-col">
             {/* Header */}
@@ -150,6 +182,62 @@ export default function AuctionLanding() {
                         </Link>
                     </motion.div>
                 </div>
+
+                <motion.section
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.55 }}
+                    className="mt-7 w-full max-w-3xl rounded-2xl border border-[#CFDACD] bg-[#F4F8F3]/95 p-5 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6"
+                    aria-labelledby="demo-access-title"
+                >
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-[#DDEADB] px-2.5 py-1 text-[11px] font-bold tracking-[0.12em] text-[#45624B] uppercase">
+                                Live demo
+                            </span>
+                            <p id="demo-access-title" className="text-base font-bold text-[#2F312F]">
+                                Explore both sides of ReStock
+                            </p>
+                        </div>
+                        <p className="mt-2 max-w-lg text-[13px] leading-5 text-[#667066]">
+                            Open a shared test workspace instantly. Demo activity does not use real
+                            business or delivery details.
+                        </p>
+                        {demoError ? (
+                            <p role="alert" className="mt-2 text-[13px] text-[#A33A2B]">
+                                {demoError}
+                            </p>
+                        ) : null}
+                    </div>
+                    <div className="mt-4 grid shrink-0 gap-2 sm:mt-0">
+                        <button
+                            type="button"
+                            onClick={() => void openDemo("retailer")}
+                            disabled={openingDemo !== null}
+                            className="inline-flex h-10 min-w-48 items-center justify-center gap-2 rounded-lg bg-[#365845] px-4 text-[13px] font-semibold text-white transition hover:bg-[#2C4A39] disabled:cursor-wait disabled:opacity-60"
+                        >
+                            {openingDemo === "retailer" ? (
+                                <LoaderCircle size={15} className="animate-spin" />
+                            ) : (
+                                <Store size={15} />
+                            )}
+                            Open retailer demo
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => void openDemo("supplier")}
+                            disabled={openingDemo !== null}
+                            className="inline-flex h-10 min-w-48 items-center justify-center gap-2 rounded-lg border border-[#B7C7B7] bg-white px-4 text-[13px] font-semibold text-[#365845] transition hover:bg-[#F8FAF7] disabled:cursor-wait disabled:opacity-60"
+                        >
+                            {openingDemo === "supplier" ? (
+                                <LoaderCircle size={15} className="animate-spin" />
+                            ) : (
+                                <Truck size={15} />
+                            )}
+                            Open supplier demo
+                        </button>
+                    </div>
+                </motion.section>
 
                 {/* Bottom stats */}
                 <motion.div
