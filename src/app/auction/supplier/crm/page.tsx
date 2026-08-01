@@ -42,7 +42,7 @@ export default function SupplierRequestsPage() {
         const quote = myQuote(request);
         if (filter === "open") return !quote && ["sent", "quoted"].includes(request.status);
         if (filter === "submitted") return Boolean(quote) && request.status !== "awarded";
-        if (filter === "awarded") return request.awardedQuoteId === quote?.id;
+        if (filter === "awarded") return Boolean(quote && request.awardedQuoteId === quote.id);
         return true;
     };
     const filtered = requests.filter(
@@ -105,7 +105,10 @@ export default function SupplierRequestsPage() {
                     icon={CheckCircle2}
                     label="Orders won"
                     value={requests
-                        .filter((request) => request.awardedQuoteId === myQuote(request)?.id)
+                        .filter((request) => {
+                            const quote = myQuote(request);
+                            return Boolean(quote && request.awardedQuoteId === quote.id);
+                        })
                         .length.toString()}
                 />
             </div>
@@ -153,7 +156,7 @@ export default function SupplierRequestsPage() {
                 <div className="space-y-3">
                     {filtered.map((request) => {
                         const quote = myQuote(request);
-                        const won = request.awardedQuoteId === quote?.id;
+                        const won = Boolean(quote && request.awardedQuoteId === quote.id);
                         const closed = ["awarded", "cancelled", "expired"].includes(request.status);
                         return (
                             <article
@@ -189,7 +192,7 @@ export default function SupplierRequestsPage() {
                                                         key={line.id}
                                                         className="rounded-md bg-[#F4F7F3] px-2 py-1 text-[13px] text-[#5D645D]"
                                                     >
-                                                        {line.productName} · {line.quantity} units
+                                                        {line.productName} · {line.quantity} {line.quantity === 1 ? "unit" : "units"}
                                                     </span>
                                                 ))}
                                             </div>
@@ -210,7 +213,8 @@ export default function SupplierRequestsPage() {
                                                     {money(quote.totalPrice)}
                                                 </p>
                                                 <p className="mt-2 text-[13px] text-[#7B817B]">
-                                                    {quote.deliveryDays} days · {quote.paymentTerms}
+                                                    {quote.deliveryDays}{" "}
+                                                    {quote.deliveryDays === 1 ? "day" : "days"} · {quote.paymentTerms}
                                                 </p>
                                             </>
                                         ) : (

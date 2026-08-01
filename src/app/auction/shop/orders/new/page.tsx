@@ -11,6 +11,7 @@ import {
     Check,
     CircleAlert,
     LoaderCircle,
+    MessageCircle,
     Package,
     Plus,
     Search,
@@ -19,7 +20,13 @@ import {
     Trash2,
     Users,
 } from "lucide-react";
-import { Field, fieldClass, primaryButtonClass } from "../../../components/form";
+import { useAuth } from "../../../components/auth-context";
+import {
+    Field,
+    fieldClass,
+    primaryButtonClass,
+    secondaryButtonClass,
+} from "../../../components/form";
 import { money, shortDate } from "../../../lib/format";
 import {
     type OrderLine,
@@ -27,6 +34,11 @@ import {
     useOrderWorkflowStore,
 } from "../../../lib/order-workflow-store";
 import { products, type Product } from "../../../lib/products-db";
+import {
+    hasDirectWhatsAppNumber,
+    orderDraftWhatsAppMessage,
+    whatsappUrl,
+} from "../../../lib/whatsapp";
 
 const steps = ["Order details", "Review", "Choose suppliers", "Send request"];
 
@@ -34,11 +46,55 @@ function suggestedTarget(product: Product) {
     return Number(Math.max(product.cost * 1.08, product.price * 0.76).toFixed(2));
 }
 
+const supplierCategoryGroups: Record<string, string[]> = {
+    beverages: ["beer & alcohol", "beverages & drinks", "spirits & wine", "energy drinks"],
+    "dry goods": [
+        "canned food",
+        "dried goods & pulses",
+        "instant noodles & pasta",
+        "flour & baking",
+        "rice & grains",
+        "sugar & salt",
+        "spices & masala",
+    ],
+    "cooking essentials": [
+        "sauces & condiments",
+        "dried goods & pulses",
+        "eggs",
+        "flour & baking",
+        "pickles & preserves",
+        "rice & grains",
+        "spices & masala",
+        "sugar & salt",
+    ],
+    snacks: [
+        "biscuits & cookies",
+        "bread & bakery",
+        "cakes & pastries",
+        "chips & snacks",
+        "confectionery",
+        "ice cream & frozen",
+        "indian snacks",
+    ],
+    household: [
+        "flowers",
+        "general merchandise",
+        "household cleaning",
+        "prayer items",
+        "tissue & paper",
+    ],
+    "personal care": ["feminine care", "hair care", "health & medicine", "oral care"],
+};
+
+function supplierCoversCategory(supplierTag: string, productCategory: string) {
+    const tag = supplierTag.trim().toLowerCase();
+    const category = productCategory.trim().toLowerCase();
+    return tag === category || supplierCategoryGroups[tag]?.includes(category) || false;
+}
+
 function supplierScore(supplier: SupplierDirectoryEntry, lines: OrderLine[]) {
     const matches = lines.filter((line) =>
-        supplier.categoryTags.some((tag) =>
-            line.category.toLowerCase().includes(tag.toLowerCase().split(" & ")[0])
-        )
+        supplier.categoryTags.some((tag) => supplierCoversCategory(tag, line.category))
     ).length;
     const coverage = lines.length ? (matches / lines.length) * 100 : 0;
     return Math.round(
@@ -48,6 +104,7 @@ function supplierScore(supplier: SupplierDirectoryEntry, lines: OrderLine[]) {
 
 export default function CreateOrderPage() {
     const router = useRouter();
+    const { organization } = useAuth();
     const { createRequest, supplierDirectory, loading, error: storeError } = useOrderWorkflowStore();
     const minimumDate = useMemo(() => {
         const date = new Date();
@@ -565,12 +622,12 @@ export default function CreateOrderPage() {
                             />
                             <Summary
                                 label="Items"
-                                value={`${lines.length} products · ${lines.reduce((sum, line) => sum + line.quantity, 0)} units`}
+                                value={`${lines.length} ${lines.length === 1 ? "product" : "products"} · ${lines.reduce((sum, line) => sum + line.quantity, 0)} ${lines.reduce((sum, line) => sum + line.quantity, 0) === 1 ? "unit" : "units"}`}
                             />
                             <Summary label="Budget" value={money(targetTotal)} />
                             <Summary
                                 label="Suppliers invited"
-                                value={`${selectedSupplierIds.length} suppliers`}
+                                value={`${selectedSupplierIds.length} ${selectedSupplierIds.length === 1 ? "supplier" : "suppliers"}`}
                             />
                             <Summary
                                 label="Quote window"
@@ -582,6 +639,38 @@ export default function CreateOrderPage() {
                             use ReStock IDs while quotes, delivery updates, and photos are recorded
                             with the order.
                         </div>
+                        <div className="mt-4 flex flex-col gap-4 rounded-xl border border-[#CFE0D1] bg-[#F8FBF7] p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-[14px] font-semibold text-[#2F312F]">
+                                    Want help before sending?
+                                </p>
+                                <p className="mt-1 max-w-xl text-[13px] leading-5 text-[#707670]">
+                                    Share this draft with {hasDirectWhatsAppNumber ? "ReStock" : "your ReStock contact"} on
+                                    WhatsApp. The message contains ReStock IDs and order details, not
+                                    business names or delivery addresses.
+                                </p>
+                            </div>
+                            <a
+                                href={whatsappUrl(
+                                    orderDraftWhatsAppMessage({
+                                        retailerAlias: organization?.aliasCode,
+                                        title,
+                                        lines,
+                                        deliveryDate,
+                                        targetTotal,
+                                    })
+                                )}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={`${secondaryButtonClass} shrink-0`}
+                            >
+                                <MessageCircle size={16} /> Share draft
+                            </a>
+                        </div>
+                        <p className="mt-2 text-[12px] leading-5 text-[#8A918A]">
+                            Sharing does not create a ReStock request. Use “Send request to suppliers”
+                            below when the order is ready.
+                        </p>
                     </div>
                 ) : null}
 

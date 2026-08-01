@@ -60,6 +60,21 @@ The following production configuration is required outside source control:
 The reviewer portal is `/auction/review`. Access is denied unless the signed-in
 user is active in `restock_reviewers`.
 
+## WhatsApp-assisted ordering
+
+The home page, order review, and quote confirmation can open privacy-safe,
+pre-filled WhatsApp messages. Set the public GitHub Actions repository variable
+`RESTOCK_WHATSAPP_NUMBER` to the ReStock WhatsApp Business number in international
+format without `+` or spaces. Without it, WhatsApp opens its share flow.
+
+This click-to-chat experience does not ingest messages or create orders. A full
+WhatsApp Business Platform integration still requires a verified business number,
+backend webhooks, opt-in/template compliance, idempotent message processing, order
+confirmation, and human handoff.
+
+See [the market launch readiness checklist](docs/market-launch-readiness.md) before
+accepting real orders or payments.
+
 ## Deployment
 
 Pushes to `main` run dependency audit, lint, type checking, a static production

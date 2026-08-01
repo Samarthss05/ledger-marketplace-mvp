@@ -1,5 +1,8 @@
 name: Deploy Next.js site to Pages
 
+env:
+  NEXT_PUBLIC_RESTOCK_WHATSAPP_NUMBER: ${{ vars.RESTOCK_WHATSAPP_NUMBER }}
+
 on:
   push:
     branches: ["main"]

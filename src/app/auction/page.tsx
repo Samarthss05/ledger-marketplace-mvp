@@ -11,12 +11,14 @@ import {
     Shield,
     FileText,
     LoaderCircle,
+    MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandLockup } from "@/components/brand-lockup";
 import { type AccountType, useAuth } from "./components/auth-context";
 import { demoAccounts } from "./lib/demo-accounts";
+import { startOrderWhatsAppMessage, whatsappUrl } from "./lib/whatsapp";
 
 export default function AuctionLanding() {
     const router = useRouter();
@@ -80,11 +82,30 @@ export default function AuctionLanding() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.2 }}
-                    className="mb-12 max-w-2xl text-center text-base leading-7 text-[#666B66]"
+                    className="mb-6 max-w-2xl text-center text-base leading-7 text-[#666B66]"
                 >
                     Create stock orders, compare supplier quotes, and track every delivery from
                     pickup to arrival.
                 </motion.p>
+
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.25 }}
+                    className="mb-10 flex flex-col items-center gap-2"
+                >
+                    <a
+                        href={whatsappUrl(startOrderWhatsAppMessage)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#B8C9B8] bg-white px-5 text-sm font-semibold text-[#365845] shadow-sm transition hover:-translate-y-0.5 hover:border-[#6F9277] hover:bg-[#F7FAF6]"
+                    >
+                        <MessageCircle size={17} /> Start an order on WhatsApp
+                    </a>
+                    <p className="text-center text-[12px] leading-5 text-[#7B837B]">
+                        Opens a pre-filled message. Supplier identities remain protected.
+                    </p>
+                </motion.div>
 
                 {/* Role Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">

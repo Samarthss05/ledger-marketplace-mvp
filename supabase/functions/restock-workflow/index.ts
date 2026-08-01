@@ -453,6 +453,9 @@ async function awardQuote(
   if (request.status === "awarded") {
     return response(req, { error: "A supplier has already been selected for this request." }, 409);
   }
+  if (!["sent", "quoted"].includes(request.status)) {
+    return response(req, { error: "This quote request is closed and can no longer be awarded." }, 409);
+  }
 
   const { data: quote, error: quoteError } = await admin
     .from("restock_quotes")

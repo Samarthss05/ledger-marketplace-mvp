@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
     ArrowRight,
+    ArrowDownUp,
     Bot,
     CheckCircle2,
     ChevronDown,
@@ -12,6 +13,7 @@ import {
     Clock3,
     FileText,
     LoaderCircle,
+    MessageCircle,
     Package,
     Plus,
     Send,
@@ -20,7 +22,8 @@ import {
     Users,
 } from "lucide-react";
 import { MetricCard } from "../../components/metric-card";
-import { primaryButtonClass } from "../../components/form";
+import { primaryButtonClass, secondaryButtonClass } from "../../components/form";
+import { Modal } from "../../components/modal";
 import { retailerRequestStatus } from "../../lib/display-copy";
 import { dateTime, money, moneyCompact, shortDate } from "../../lib/format";
 import {
@@ -28,11 +31,27 @@ import {
     type SupplierQuote,
     useOrderWorkflowStore,
 } from "../../lib/order-workflow-store";
+import { quoteDecisionWhatsAppMessage, whatsappUrl } from "../../lib/whatsapp";
 
 type Filter = "all" | SourcingRequest["status"];
+type QuoteSort = "recommended" | "price" | "delivery";
 
 function targetValue(request: SourcingRequest) {
     return request.lines.reduce((sum, line) => sum + line.quantity * line.targetPrice, 0);
+}
+
+function totalUnits(request: SourcingRequest) {
+    return request.lines.reduce((sum, line) => sum + line.quantity, 0);
+}
+
+function sortQuotes(quotes: SupplierQuote[], sort: QuoteSort) {
+    return [...quotes].sort((a, b) => {
+        if (sort === "price") return a.totalPrice - b.totalPrice || b.score - a.score;
+        if (sort === "delivery") {
+            return a.deliveryDate.localeCompare(b.deliveryDate) || a.totalPrice - b.totalPrice;
+        }
+        return b.score - a.score || a.totalPrice - b.totalPrice;
+    });
 }
 
 export default function RequestsPage() {
@@ -42,6 +61,11 @@ export default function RequestsPage() {
     const [awardingId, setAwardingId] = useState<string | null>(null);
     const [successReference, setSuccessReference] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
+    const [quoteSort, setQuoteSort] = useState<QuoteSort>("recommended");
+    const [pendingAward, setPendingAward] = useState<{
+        request: SourcingRequest;
+        quote: SupplierQuote;
+    } | null>(null);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -75,6 +99,7 @@ export default function RequestsPage() {
         try {
             const order = await awardQuote(requestId, quoteId);
             setSuccessReference(order.reference);
+            setPendingAward(null);
         } catch (cause) {
             setActionError(cause instanceof Error ? cause.message : "We could not select this quote. Please try again.");
         } finally {
@@ -195,7 +220,23 @@ export default function RequestsPage() {
                 <div className="space-y-3">
                     {filtered.map((request) => {
                         const expanded = request.id === expandedId;
-                        const ranked = [...request.quotes].sort((a, b) => b.score - a.score);
+                        const recommendedQuote = [...request.quotes].sort(
+                            (a, b) => b.score - a.score || a.totalPrice - b.totalPrice
+                        )[0];
+                        const ranked = sortQuotes(request.quotes, quoteSort);
+                        const lowestPrice = request.quotes.length
+                            ? Math.min(...request.quotes.map((quote) => quote.totalPrice))
+                            : 0;
+                        const earliestDelivery = request.quotes.length
+                            ? [...request.quotes]
+                                  .map((quote) => quote.deliveryDate)
+                                  .sort((a, b) => a.localeCompare(b))[0]
+                            : "";
+                        const responsePercent = request.selectedSupplierIds.length
+                            ? Math.round(
+                                  (request.quotes.length / request.selectedSupplierIds.length) * 100
+                              )
+                            : 0;
                         return (
                             <article
                                 id={`request-${request.id}`}
@@ -225,7 +266,8 @@ export default function RequestsPage() {
                                                     ) : null}
                                                 </div>
                                                 <p className="mt-1.5 text-[13px] text-[#8A918A]">
-                                                    {request.reference} · {request.lines.length} items ·
+                                                    {request.reference} · {request.lines.length}{" "}
+                                                    {request.lines.length === 1 ? "item" : "items"} ·
                                                     delivery by {shortDate(`${request.deliveryDate}T12:00:00`)}
                                                 </p>
                                                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -273,6 +315,53 @@ export default function RequestsPage() {
 
                                 {expanded ? (
                                     <div className="border-t border-[#E6ECE4] bg-[#FAFBF9] p-5">
+                                        <div className="mb-4 grid gap-3 rounded-xl border border-[#E2E8E0] bg-white p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                                            <div>
+                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                                    <p className="text-[14px] font-semibold text-[#2F312F]">
+                                                        {request.quotes.length} of {request.selectedSupplierIds.length}{" "}
+                                                        {request.selectedSupplierIds.length === 1
+                                                            ? "supplier"
+                                                            : "suppliers"}{" "}
+                                                        replied
+                                                    </p>
+                                                    <span className="text-[12px] text-[#8A918A]">
+                                                        Quotes close {dateTime(request.quoteDeadline)}
+                                                    </span>
+                                                </div>
+                                                <div
+                                                    className="mt-2 h-1.5 max-w-md overflow-hidden rounded-full bg-[#E8EDE6]"
+                                                    role="progressbar"
+                                                    aria-label="Supplier response progress"
+                                                    aria-valuemin={0}
+                                                    aria-valuemax={100}
+                                                    aria-valuenow={responsePercent}
+                                                >
+                                                    <div
+                                                        className="h-full rounded-full bg-[#6F9277] transition-all"
+                                                        style={{ width: `${responsePercent}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            {request.quotes.length > 1 ? (
+                                                <label className="flex items-center gap-2 text-[12px] font-medium text-[#667066]">
+                                                    <ArrowDownUp size={14} />
+                                                    Sort
+                                                    <select
+                                                        aria-label="Sort supplier quotes"
+                                                        value={quoteSort}
+                                                        onChange={(event) =>
+                                                            setQuoteSort(event.target.value as QuoteSort)
+                                                        }
+                                                        className="h-9 rounded-lg border border-[#D7DFD5] bg-white px-3 text-[13px] font-medium text-[#2F312F] outline-none focus:border-[#6F9277] focus:ring-2 focus:ring-[#6F9277]/15"
+                                                    >
+                                                        <option value="recommended">Recommended</option>
+                                                        <option value="price">Lowest price</option>
+                                                        <option value="delivery">Earliest delivery</option>
+                                                    </select>
+                                                </label>
+                                            ) : null}
+                                        </div>
                                         {request.quotes.length === 0 ? (
                                             <div className="flex items-start gap-3 rounded-xl border border-dashed border-[#C9D4C6] bg-white p-5">
                                                 <Clock3 size={18} className="mt-0.5 shrink-0 text-[#6F9277]" />
@@ -281,7 +370,11 @@ export default function RequestsPage() {
                                                         Waiting for quotes
                                                     </p>
                                                     <p className="mt-1 text-[13px] leading-6 text-[#8A918A]">
-                                                        {request.selectedSupplierIds.length} suppliers received
+                                                        {request.selectedSupplierIds.length}{" "}
+                                                        {request.selectedSupplierIds.length === 1
+                                                            ? "supplier"
+                                                            : "suppliers"}{" "}
+                                                        received
                                                         your request. Quotes are due{" "}
                                                         {dateTime(request.quoteDeadline)}.
                                                     </p>
@@ -294,25 +387,33 @@ export default function RequestsPage() {
                                                         <Bot size={18} className="mt-0.5 shrink-0 text-[#4F6F56]" />
                                                         <div>
                                                             <p className="text-[14px] font-semibold text-[#2F312F]">
-                                                                Best overall match: {ranked[0].supplierAlias}
+                                                                Recommended: {recommendedQuote?.supplierAlias}
                                                             </p>
                                                             <p className="mt-0.5 text-[13px] leading-6 text-[#667066]">
-                                                                We compare total price and delivery date. Check
-                                                                the full quote before choosing.
+                                                                The fit score balances price and delivery speed.
+                                                                Lowest-price and earliest-delivery labels show the
+                                                                trade-offs; you make the final decision.
                                                             </p>
                                                         </div>
                                                     </div>
                                                 ) : null}
                                                 <div className="grid gap-3 lg:grid-cols-3">
-                                                    {ranked.map((quote, index) => (
+                                                    {ranked.map((quote) => (
                                                         <QuoteCard
                                                             key={quote.id}
                                                             quote={quote}
-                                                            recommended={index === 0}
+                                                            budget={targetValue(request)}
+                                                            units={totalUnits(request)}
+                                                            recommended={recommendedQuote?.id === quote.id}
+                                                            lowestPrice={quote.totalPrice === lowestPrice}
+                                                            earliestDelivery={quote.deliveryDate === earliestDelivery}
                                                             awarded={request.awardedQuoteId === quote.id}
-                                                            disabled={request.status === "awarded" || Boolean(awardingId)}
+                                                            disabled={
+                                                                !["sent", "quoted"].includes(request.status) ||
+                                                                Boolean(awardingId)
+                                                            }
                                                             working={awardingId === quote.id}
-                                                            onSelect={() => void selectQuote(request.id, quote.id)}
+                                                            onSelect={() => setPendingAward({ request, quote })}
                                                         />
                                                     ))}
                                                 </div>
@@ -340,6 +441,123 @@ export default function RequestsPage() {
                     </Link>
                 </div>
             ) : null}
+
+            {pendingAward ? (
+                <Modal
+                    open
+                    onClose={() => {
+                        if (!awardingId) setPendingAward(null);
+                    }}
+                    eyebrow="Confirm supplier"
+                    title={`Create order with ${pendingAward.quote.supplierAlias}?`}
+                    description={`${pendingAward.request.reference} · ${pendingAward.quote.reference}`}
+                    footer={
+                        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                            <a
+                                href={whatsappUrl(
+                                    quoteDecisionWhatsAppMessage({
+                                        request: pendingAward.request,
+                                        quote: pendingAward.quote,
+                                    })
+                                )}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={secondaryButtonClass}
+                            >
+                                <MessageCircle size={16} /> Ask on WhatsApp
+                            </a>
+                            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                                <button
+                                    type="button"
+                                    onClick={() => setPendingAward(null)}
+                                    disabled={Boolean(awardingId)}
+                                    className={secondaryButtonClass}
+                                >
+                                    Keep comparing
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        void selectQuote(
+                                            pendingAward.request.id,
+                                            pendingAward.quote.id
+                                        )
+                                    }
+                                    disabled={Boolean(awardingId)}
+                                    className={primaryButtonClass}
+                                >
+                                    {awardingId ? (
+                                        <LoaderCircle className="animate-spin" size={16} />
+                                    ) : (
+                                        <CheckCircle2 size={16} />
+                                    )}
+                                    Confirm and create order
+                                </button>
+                            </div>
+                        </div>
+                    }
+                >
+                    <div className="space-y-4">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <DecisionSummary
+                                label="Order total"
+                                value={money(pendingAward.quote.totalPrice)}
+                                detail={`${money(
+                                    Math.abs(
+                                        targetValue(pendingAward.request) -
+                                            pendingAward.quote.totalPrice
+                                    )
+                                )} ${
+                                    pendingAward.quote.totalPrice <=
+                                    targetValue(pendingAward.request)
+                                        ? "under budget"
+                                        : "over budget"
+                                }`}
+                            />
+                            <DecisionSummary
+                                label="Delivery"
+                                value={shortDate(
+                                    `${pendingAward.quote.deliveryDate}T12:00:00`
+                                )}
+                                detail={`${pendingAward.quote.deliveryDays} day lead time`}
+                            />
+                            <DecisionSummary
+                                label="Payment terms"
+                                value={pendingAward.quote.paymentTerms}
+                                detail="As submitted by the supplier"
+                            />
+                            <DecisionSummary
+                                label="Fit score"
+                                value={`${pendingAward.quote.score}/100`}
+                                detail="Price and delivery fit"
+                            />
+                        </div>
+                        <div className="rounded-xl bg-[#FFF7E9] px-4 py-3.5 text-[13px] leading-6 text-[#7A5A25]">
+                            Confirming creates the order and closes the other supplier quotes. This
+                            action cannot currently be changed from the app, so check the total,
+                            delivery date, and payment terms first.
+                        </div>
+                    </div>
+                </Modal>
+            ) : null}
+        </div>
+    );
+}
+
+function DecisionSummary({
+    label,
+    value,
+    detail,
+}: {
+    label: string;
+    value: string;
+    detail: string;
+}) {
+    return (
+        <div className="rounded-xl border border-[#E2E8E0] p-4">
+            <p className="text-[12px] font-medium text-[#7B817B]">{label}</p>
+            <p className="tabular mt-1 text-[17px] font-semibold text-[#2F312F]">{value}</p>
+            <p className="mt-1 text-[12px] leading-5 text-[#8A918A]">{detail}</p>
         </div>
     );
 }
@@ -362,19 +580,30 @@ function Status({ status }: { status: SourcingRequest["status"] }) {
 
 function QuoteCard({
     quote,
+    budget,
+    units,
     recommended,
+    lowestPrice,
+    earliestDelivery,
     awarded,
     disabled,
     working,
     onSelect,
 }: {
     quote: SupplierQuote;
+    budget: number;
+    units: number;
     recommended: boolean;
+    lowestPrice: boolean;
+    earliestDelivery: boolean;
     awarded: boolean;
     disabled: boolean;
     working: boolean;
     onSelect: () => void;
 }) {
+    const difference = budget - quote.totalPrice;
+    const withinBudget = difference >= 0;
+
     return (
         <div
             className={`flex flex-col overflow-hidden rounded-xl border bg-white ${
@@ -387,6 +616,18 @@ function QuoteCard({
                 </p>
             ) : null}
             <div className="flex flex-1 flex-col p-4">
+                <div className="mb-3 flex min-h-6 flex-wrap gap-1.5">
+                    {lowestPrice ? (
+                        <span className="rounded-full bg-[#E9F3E8] px-2 py-1 text-[11px] font-semibold text-[#3F7048]">
+                            Lowest price
+                        </span>
+                    ) : null}
+                    {earliestDelivery ? (
+                        <span className="rounded-full bg-[#EDF0FA] px-2 py-1 text-[11px] font-semibold text-[#4A5D92]">
+                            Earliest delivery
+                        </span>
+                    ) : null}
+                </div>
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                         <p className="truncate text-[15px] font-semibold text-[#2F312F]">
@@ -396,14 +637,27 @@ function QuoteCard({
                             {quote.reference} · {quote.paymentTerms}
                         </p>
                     </div>
-                    <div className="shrink-0 rounded-lg bg-[#EDF3EC] px-3 py-1.5 text-center">
-                        <p className="text-[11px] text-[#6F9277]">Match</p>
-                        <p className="tabular text-[15px] font-semibold text-[#4F6F56]">{quote.score}</p>
+                    <div
+                        className="shrink-0 rounded-lg bg-[#EDF3EC] px-3 py-1.5 text-center"
+                        title="Fit score combines the quote total and delivery speed"
+                    >
+                        <p className="text-[11px] text-[#6F9277]">Fit score</p>
+                        <p className="tabular text-[15px] font-semibold text-[#4F6F56]">
+                            {quote.score}/100
+                        </p>
                     </div>
                 </div>
                 <p className="tabular mt-4 text-[26px] leading-none font-semibold tracking-[-0.02em] text-[#2F312F]">
                     {money(quote.totalPrice)}
                 </p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+                    <span className="text-[#8A918A]">
+                        {money(quote.totalPrice / Math.max(units, 1))} average per unit
+                    </span>
+                    <span className={withinBudget ? "font-semibold text-[#3F7048]" : "font-semibold text-[#A4582A]"}>
+                        {money(Math.abs(difference))} {withinBudget ? "under" : "over"} budget
+                    </span>
+                </div>
                 <div className="mt-3 space-y-1.5 text-[13px] text-[#5D645D]">
                     <p className="flex items-center gap-2">
                         <Truck size={14} className="shrink-0 text-[#8A918A]" />
