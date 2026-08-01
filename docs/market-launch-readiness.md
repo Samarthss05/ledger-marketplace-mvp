@@ -9,9 +9,10 @@ assessment, not legal advice.
 ## Current position
 
 The product has a coherent pilot flow: protected retailer and supplier aliases,
-structured quote requests, sealed supplier quotes, quote selection, Ninja Van
-tracking states, supplier and retailer photo evidence, disputes, audit events,
-RLS-protected data, and authenticated Edge Functions.
+structured quote requests, sealed supplier quotes, transactional quote selection,
+scheduled request expiry, idempotent workflow actions, Ninja Van tracking states,
+supplier and retailer photo evidence, disputes, audit events, RLS-protected data,
+and authenticated Edge Functions.
 
 It is not ready to hold customer money or run without manual operations. The
 highest-risk gaps are payment custody, courier booking, dispute staffing,
@@ -35,10 +36,9 @@ monitoring.
   reviewers. Add at least two trained reviewers, an escalation owner, response
   SLAs, conflict-of-interest rules, and an appeal path before enabling payout
   holds.
-- [ ] **Make quote award atomic.** Awarding a quote performs several independent
-  inserts and updates from an Edge Function. Move the operation into a single
-  database transaction with row locking and an idempotency key so two clicks,
-  retries, or partial failures cannot create inconsistent orders.
+- [x] **Make quote award atomic.** Request creation, quote submission, and quote
+  award now run in database transactions with authorization checks, row/advisory
+  locks, idempotency keys, audit records, and a reliable courier-booking outbox.
 - [ ] **Verify businesses.** Add KYB checks for legal entity, UEN, bank account,
   beneficial owner/contact, supplier product rights, required licences, and
   account suspension/reinstatement. Do not treat email confirmation as supplier
@@ -68,8 +68,8 @@ monitoring.
   quote process; use one term consistently in contracts and the interface.
 - [ ] Decide whether retailers should see a target budget. Exposing it to every
   invited supplier can anchor bids and reduce price competition.
-- [ ] Add server-side request expiration and a scheduled job. A timestamp exists,
-  but requests do not automatically become `expired`.
+- [x] Add server-side request expiration and a scheduled job. PostgreSQL Cron now
+  closes expired requests and their open quotes every five minutes.
 - [ ] Define whether a retailer may award an already-submitted quote after the
   quote deadline and how long that quote remains binding.
 - [ ] Add quote validity/expiry, GST inclusion, delivery fee, discounts, currency,
@@ -80,8 +80,8 @@ monitoring.
   and alternative quantities are allowed.
 - [ ] Add supplier withdrawal and retailer cancellation flows with cut-off rules,
   reasons, notifications, and audit entries.
-- [ ] Preserve quote revisions instead of overwriting the prior quote; show who
-  changed what and when.
+- [x] Preserve quote revisions instead of overwriting the prior quote. Every
+  submission is retained with revision number, actor, values, and timestamp.
 - [ ] Define tie-breaking and new-supplier treatment. A performance score of zero
   must not silently make a legitimate new supplier uncompetitive.
 - [ ] Publish the fit-score inputs and weights. Test for manipulation, unintended
@@ -105,8 +105,9 @@ monitoring.
   receiving hours, blackout dates, and Ninja Van serviceability.
 - [ ] Allow a retailer to save a draft, duplicate a previous order, edit before the
   deadline, and recover after a browser refresh or network loss.
-- [ ] Add idempotency to every create/submit action so double taps, browser retries,
-  and WhatsApp retries do not duplicate requests, quotes, orders, or payments.
+- [x] Add idempotency to the live request, quote, and order-award actions so double
+  taps and browser/network retries do not duplicate workflow records. Apply the
+  same contract to future WhatsApp and payment processors before enabling them.
 - [ ] Define what happens when all invited suppliers decline, ignore the request,
   lose stock, are suspended, or fail the minimum order value.
 

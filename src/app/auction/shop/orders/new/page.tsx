@@ -119,6 +119,7 @@ export default function CreateOrderPage() {
     const [notes, setNotes] = useState("");
     const [lines, setLines] = useState<OrderLine[]>([]);
     const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
+    const [idempotencyKey] = useState(() => crypto.randomUUID());
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
 
@@ -173,6 +174,7 @@ export default function CreateOrderPage() {
         setFormError(null);
         try {
             await createRequest({
+                idempotencyKey,
                 title: title.trim(),
                 lines,
                 deliveryDate,
@@ -414,7 +416,10 @@ export default function CreateOrderPage() {
                                 <div className="flex items-baseline justify-between gap-4 px-1 pt-1">
                                     <p className="text-[13px] text-[#7B817B]">
                                         {lines.length} product{lines.length === 1 ? "" : "s"} ·{" "}
-                                        {lines.reduce((sum, line) => sum + line.quantity, 0)} units
+                                        {lines.reduce((sum, line) => sum + line.quantity, 0)}{" "}
+                                        {lines.reduce((sum, line) => sum + line.quantity, 0) === 1
+                                            ? "unit"
+                                            : "units"}
                                     </p>
                                     <p className="text-[14px] text-[#7B817B]">
                                         Budget{" "}

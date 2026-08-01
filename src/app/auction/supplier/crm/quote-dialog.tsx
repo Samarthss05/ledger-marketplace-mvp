@@ -37,8 +37,18 @@ export function QuoteDialog({
     onClose: () => void;
     onSubmit: (values: QuoteValues) => Promise<void>;
 }) {
+    const today = new Date();
+    const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+    const requestedDeliveryUtc = Date.parse(`${request.deliveryDate}T00:00:00Z`);
+    const maxDeliveryDays = Math.min(
+        120,
+        Math.max(0, Math.round((requestedDeliveryUtc - todayUtc) / 86_400_000))
+    );
+    const initialDeliveryDays = existingQuote?.deliveryDays ?? Math.min(5, maxDeliveryDays);
     const [totalPrice, setTotalPrice] = useState(existingQuote?.totalPrice.toString() ?? "");
-    const [deliveryDays, setDeliveryDays] = useState(existingQuote?.deliveryDays.toString() ?? "5");
+    const [deliveryDays, setDeliveryDays] = useState(
+        initialDeliveryDays > 0 ? initialDeliveryDays.toString() : ""
+    );
     const [paymentTerms, setPaymentTerms] = useState(existingQuote?.paymentTerms ?? "Net 30");
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -46,7 +56,7 @@ export function QuoteDialog({
     const price = Number(totalPrice);
     const days = Number(deliveryDays);
     const priceValid = price > 0;
-    const daysValid = days > 0 && days <= 120;
+    const daysValid = days > 0 && days <= maxDeliveryDays;
     const budget = request.lines.reduce((sum, line) => sum + line.targetPrice * line.quantity, 0);
     const arrival = daysValid
         ? new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
@@ -54,7 +64,7 @@ export function QuoteDialog({
     const missesDeliveryDate = Boolean(arrival && arrival > request.deliveryDate);
 
     const submit = async () => {
-        if (!priceValid || !daysValid) return;
+        if (!priceValid || !daysValid || missesDeliveryDate) return;
         setSubmitting(true);
         setError(null);
         try {
@@ -81,7 +91,7 @@ export function QuoteDialog({
                     <button
                         type="button"
                         onClick={() => void submit()}
-                        disabled={submitting || !priceValid || !daysValid}
+                        disabled={submitting || !priceValid || !daysValid || missesDeliveryDate}
                         className={primaryButtonClass}
                     >
                         {submitting ? (
@@ -150,7 +160,7 @@ export function QuoteDialog({
                                 id="quote-days"
                                 type="number"
                                 min={1}
-                                max={120}
+                                max={Math.max(1, maxDeliveryDays)}
                                 inputMode="numeric"
                                 value={deliveryDays}
                                 onChange={(event) => setDeliveryDays(event.target.value)}
@@ -163,7 +173,12 @@ export function QuoteDialog({
                     </Field>
                 </div>
 
-                {arrival ? (
+                {maxDeliveryDays === 0 ? (
+                    <div className="flex items-start gap-2.5 rounded-lg bg-[#FFF2EF] px-3.5 py-3 text-[13px] leading-5 text-[#A33A2B]">
+                        <TriangleAlert size={16} className="mt-px shrink-0" />
+                        <p>The requested delivery date has passed. This request can no longer accept a quote.</p>
+                    </div>
+                ) : arrival ? (
                     <div
                         className={`flex items-start gap-2.5 rounded-lg px-3.5 py-3 text-[13px] leading-5 ${
                             missesDeliveryDate

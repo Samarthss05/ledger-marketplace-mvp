@@ -34,6 +34,7 @@ export default function SupplierRequestsPage() {
     const [filter, setFilter] = useState<Filter>("all");
     const [search, setSearch] = useState("");
     const [quoteRequestId, setQuoteRequestId] = useState<string | null>(null);
+    const [quoteIdempotencyKey, setQuoteIdempotencyKey] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
     const myQuote = (request: SourcingRequest) =>
@@ -54,11 +55,23 @@ export default function SupplierRequestsPage() {
     );
     const quoteRequest = requests.find((request) => request.id === quoteRequestId) ?? null;
 
+    const openQuote = (requestId: string) => {
+        setQuoteRequestId(requestId);
+        setQuoteIdempotencyKey(crypto.randomUUID());
+    };
+
     const sendQuote = async (values: QuoteValues) => {
-        if (!quoteRequest) return;
-        const result = await submitQuote({ requestId: quoteRequest.id, ...values });
+        if (!quoteRequest || !quoteIdempotencyKey) {
+            throw new Error("Start the quote again so it can be submitted safely.");
+        }
+        const result = await submitQuote({
+            requestId: quoteRequest.id,
+            idempotencyKey: quoteIdempotencyKey,
+            ...values,
+        });
         setSuccess(`${result.reference} was sent. The retailer can now review your quote.`);
         setQuoteRequestId(null);
+        setQuoteIdempotencyKey(null);
     };
 
     return (
@@ -233,7 +246,7 @@ export default function SupplierRequestsPage() {
                                         {!closed ? (
                                             <button
                                                 type="button"
-                                                onClick={() => setQuoteRequestId(request.id)}
+                                                onClick={() => openQuote(request.id)}
                                                 className={`${primaryButtonClass} mt-4 w-full`}
                                             >
                                                 <CircleDollarSign size={16} />
@@ -259,10 +272,13 @@ export default function SupplierRequestsPage() {
 
             {quoteRequest ? (
                 <QuoteDialog
-                    key={quoteRequest.id}
+                    key={`${quoteRequest.id}:${quoteIdempotencyKey}`}
                     request={quoteRequest}
                     existingQuote={myQuote(quoteRequest)}
-                    onClose={() => setQuoteRequestId(null)}
+                    onClose={() => {
+                        setQuoteRequestId(null);
+                        setQuoteIdempotencyKey(null);
+                    }}
                     onSubmit={sendQuote}
                 />
             ) : null}

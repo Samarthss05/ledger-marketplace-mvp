@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../components/auth-context";
 import { MetricCard } from "../components/metric-card";
+import { supplierRequestStatus } from "../lib/display-copy";
 import { moneyCompact } from "../lib/format";
 import { useOrderWorkflowStore } from "../lib/order-workflow-store";
 
@@ -108,6 +109,22 @@ export default function SupplierDashboard() {
                         <div className="mt-4 space-y-2">
                             {requests.slice(0, 5).map((request) => {
                                 const quote = myQuote(request);
+                                const quoteState =
+                                    request.status === "awarded"
+                                        ? quote?.status === "awarded"
+                                            ? "Selected"
+                                            : "Closed"
+                                        : ["cancelled", "expired"].includes(request.status)
+                                          ? supplierRequestStatus(request.status)
+                                          : quote
+                                            ? "Quoted"
+                                            : "Respond";
+                                const quoteStateClass =
+                                    quoteState === "Selected" || quoteState === "Quoted"
+                                        ? "bg-[#E7F2E6] text-[#3F7048]"
+                                        : quoteState === "Respond"
+                                          ? "bg-[#FFF5E6] text-[#94621B]"
+                                          : "bg-[#EEF0ED] text-[#687068]";
                                 return (
                                     <Link
                                         key={request.id}
@@ -124,13 +141,9 @@ export default function SupplierDashboard() {
                                         </div>
                                         <div className="flex shrink-0 items-center gap-2">
                                             <span
-                                                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                                                    quote
-                                                        ? "bg-[#E7F2E6] text-[#3F7048]"
-                                                        : "bg-[#FFF5E6] text-[#94621B]"
-                                                }`}
+                                                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${quoteStateClass}`}
                                             >
-                                                {quote ? "Quoted" : "Respond"}
+                                                {quoteState}
                                             </span>
                                             <ArrowRight size={14} className="text-[#91A195]" />
                                         </div>

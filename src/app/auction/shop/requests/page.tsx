@@ -65,6 +65,7 @@ export default function RequestsPage() {
     const [pendingAward, setPendingAward] = useState<{
         request: SourcingRequest;
         quote: SupplierQuote;
+        idempotencyKey: string;
     } | null>(null);
 
     useEffect(() => {
@@ -93,11 +94,11 @@ export default function RequestsPage() {
     const filtered =
         filter === "all" ? requests : requests.filter((request) => request.status === filter);
 
-    const selectQuote = async (requestId: string, quoteId: string) => {
+    const selectQuote = async (requestId: string, quoteId: string, idempotencyKey: string) => {
         setAwardingId(quoteId);
         setActionError(null);
         try {
-            const order = await awardQuote(requestId, quoteId);
+            const order = await awardQuote(requestId, quoteId, idempotencyKey);
             setSuccessReference(order.reference);
             setPendingAward(null);
         } catch (cause) {
@@ -413,7 +414,13 @@ export default function RequestsPage() {
                                                                 Boolean(awardingId)
                                                             }
                                                             working={awardingId === quote.id}
-                                                            onSelect={() => setPendingAward({ request, quote })}
+                                                            onSelect={() =>
+                                                                setPendingAward({
+                                                                    request,
+                                                                    quote,
+                                                                    idempotencyKey: crypto.randomUUID(),
+                                                                })
+                                                            }
                                                         />
                                                     ))}
                                                 </div>
@@ -480,7 +487,8 @@ export default function RequestsPage() {
                                     onClick={() =>
                                         void selectQuote(
                                             pendingAward.request.id,
-                                            pendingAward.quote.id
+                                            pendingAward.quote.id,
+                                            pendingAward.idempotencyKey
                                         )
                                     }
                                     disabled={Boolean(awardingId)}

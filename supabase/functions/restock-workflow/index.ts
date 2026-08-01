@@ -70,6 +70,7 @@ const requestSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     action: z.literal("create_request"),
+    idempotencyKey: z.string().uuid(),
     title: z.string().trim().min(3).max(140),
     deliveryDate: z.string().date(),
     priority: z.enum(["standard", "urgent"]),
@@ -79,6 +80,7 @@ const requestSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     action: z.literal("submit_quote"),
+    idempotencyKey: z.string().uuid(),
     requestId: z.string().uuid(),
     totalPrice: z.number().positive().max(100_000_000),
     deliveryDays: z.number().int().min(1).max(120),
@@ -86,14 +88,17 @@ const requestSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     action: z.literal("award_quote"),
+    idempotencyKey: z.string().uuid(),
     requestId: z.string().uuid(),
     quoteId: z.string().uuid(),
   }),
   z.object({
     action: z.literal("submit_supplier_proof"),
     orderId: z.string().uuid(),
-    storagePath: z.string().min(20).max(500),
-    fileName: z.string().min(1).max(255),
+    storagePath: z.string().regex(
+      /^[0-9a-f-]{36}\/supplier\/[0-9a-f-]{36}\.(jpg|png|webp)$/
+    ),
+    fileName: z.string().trim().min(1).max(255).regex(/^[^/\\\u0000-\u001f]+$/),
     mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
     fileSizeBytes: z.number().int().positive().max(10_485_760),
     quantity: z.number().int().positive().max(1_000_000),
@@ -102,8 +107,10 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("verify_delivery"),
     orderId: z.string().uuid(),
-    storagePath: z.string().min(20).max(500),
-    fileName: z.string().min(1).max(255),
+    storagePath: z.string().regex(
+      /^[0-9a-f-]{36}\/retailer\/[0-9a-f-]{36}\.(jpg|png|webp)$/
+    ),
+    fileName: z.string().trim().min(1).max(255).regex(/^[^/\\\u0000-\u001f]+$/),
     mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
     fileSizeBytes: z.number().int().positive().max(10_485_760),
     quantity: z.number().int().positive().max(1_000_000),
@@ -130,10 +137,40 @@ function reference(prefix: "RFQ" | "QUO" | "ORD" | "DSP") {
   return `${prefix}-${suffix}`;
 }
 
-function scoreQuote(targetTotal: number, totalPrice: number, deliveryDays: number) {
-  const priceScore = Math.max(0, Math.min(100, (targetTotal / totalPrice) * 88));
-  const speedScore = Math.max(40, 100 - deliveryDays * 6);
-  return Math.round(priceScore * 0.72 + speedScore * 0.28);
+type DatabaseError = {
+  code?: string;
+  message: string;
+};
+
+const rateLimits: Record<z.infer<typeof requestSchema>["action"], {
+  maxAttempts: number;
+  windowSeconds: number;
+}> = {
+  onboard_organization: { maxAttempts: 5, windowSeconds: 3600 },
+  create_request: { maxAttempts: 10, windowSeconds: 600 },
+  submit_quote: { maxAttempts: 30, windowSeconds: 600 },
+  award_quote: { maxAttempts: 15, windowSeconds: 600 },
+  submit_supplier_proof: { maxAttempts: 10, windowSeconds: 3600 },
+  verify_delivery: { maxAttempts: 10, windowSeconds: 3600 },
+  review_queue: { maxAttempts: 120, windowSeconds: 600 },
+  resolve_dispute: { maxAttempts: 30, windowSeconds: 3600 },
+};
+
+function databaseErrorResponse(req: Request, error: DatabaseError) {
+  const explicitStatus = error.code?.startsWith("PT")
+    ? Number(error.code.slice(2))
+    : undefined;
+  const status =
+    explicitStatus && explicitStatus >= 400 && explicitStatus <= 599
+      ? explicitStatus
+      : error.code === "23505"
+        ? 409
+        : 500;
+  return response(
+    req,
+    { error: status === 500 ? "The workflow could not be completed safely." : error.message },
+    status
+  );
 }
 
 async function getMembership(admin: AdminClient, userId: string) {
@@ -215,6 +252,52 @@ async function requireReviewer(admin: AdminClient, userId: string) {
   if (!data) throw new Error("Independent reviewer access is required.");
 }
 
+function imageMimeFromSignature(bytes: Uint8Array) {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  if (
+    bytes.length >= 12 &&
+    String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" &&
+    String.fromCharCode(...bytes.slice(8, 12)) === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
+
+async function validateStoredEvidence(
+  admin: AdminClient,
+  storagePath: string,
+  expectedMimeType: "image/jpeg" | "image/png" | "image/webp",
+  expectedSize: number
+) {
+  const { data: storedFile, error } = await admin.storage
+    .from("restock-delivery-evidence")
+    .download(storagePath);
+  if (error || !storedFile) throw new Error("The uploaded photo could not be verified.");
+  if (storedFile.size !== expectedSize || storedFile.size > 10_485_760) {
+    throw new Error("The uploaded photo size does not match the submitted evidence.");
+  }
+  const header = new Uint8Array(await storedFile.slice(0, 16).arrayBuffer());
+  if (imageMimeFromSignature(header) !== expectedMimeType) {
+    throw new Error("The uploaded file is not a supported photo.");
+  }
+}
+
 async function onboardOrganization(
   req: Request,
   admin: AdminClient,
@@ -269,87 +352,33 @@ async function createRequest(
   userId: string,
   input: Extract<z.infer<typeof requestSchema>, { action: "create_request" }>
 ) {
-  const membership = await getMembership(admin, userId);
-  if (membership.accountType !== "retailer") {
-    return response(req, { error: "Only retailer accounts can create requests." }, 403);
-  }
-
   const deliveryDate = new Date(`${input.deliveryDate}T12:00:00.000Z`);
-  const tomorrow = new Date();
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-  if (deliveryDate < tomorrow) {
-    return response(req, { error: "Delivery date must be at least one day ahead." }, 400);
-  }
-
-  const { data: supplierProfiles, error: suppliersError } = await admin
-    .from("restock_supplier_profiles")
-    .select("organization_id, alias_code")
-    .in("organization_id", input.selectedSupplierIds)
-    .eq("accepting_requests", true);
-  if (suppliersError) throw suppliersError;
-  if (supplierProfiles.length !== new Set(input.selectedSupplierIds).size) {
-    return response(req, { error: "One or more selected suppliers are unavailable." }, 409);
-  }
-
   const requestId = crypto.randomUUID();
   const requestReference = reference("RFQ");
   const deadline = new Date();
   deadline.setHours(deadline.getHours() + (input.priority === "urgent" ? 12 : 48));
   const latestDeadline = new Date(deliveryDate);
   latestDeadline.setUTCDate(latestDeadline.getUTCDate() - 1);
+  const quoteDeadline = new Date(
+    Math.min(deadline.getTime(), latestDeadline.getTime())
+  ).toISOString();
 
-  const { error: requestError } = await admin.from("restock_sourcing_requests").insert({
-    id: requestId,
-    reference: requestReference,
-    retailer_org_id: membership.organizationId,
-    retailer_alias: membership.aliasCode,
-    title: input.title,
-    delivery_date: input.deliveryDate,
-    priority: input.priority,
-    notes: input.notes,
-    quote_deadline: new Date(Math.min(deadline.getTime(), latestDeadline.getTime())).toISOString(),
-    created_by: userId,
+  const { data, error } = await admin.rpc("restock_create_request", {
+    p_actor_user_id: userId,
+    p_idempotency_key: input.idempotencyKey,
+    p_request_id: requestId,
+    p_request_reference: requestReference,
+    p_title: input.title,
+    p_delivery_date: input.deliveryDate,
+    p_priority: input.priority,
+    p_notes: input.notes,
+    p_quote_deadline: quoteDeadline,
+    p_lines: input.lines,
+    p_supplier_ids: input.selectedSupplierIds,
   });
-  if (requestError) throw requestError;
+  if (error) return databaseErrorResponse(req, error);
 
-  const { error: linesError } = await admin.from("restock_request_lines").insert(
-    input.lines.map((line) => ({
-      request_id: requestId,
-      product_id: line.productId,
-      product_name: line.productName,
-      category: line.category,
-      quantity: line.quantity,
-      target_price: line.targetPrice,
-      market_price: line.marketPrice,
-    }))
-  );
-  if (linesError) throw linesError;
-
-  const { error: invitationsError } = await admin.from("restock_request_suppliers").insert(
-    supplierProfiles.map((supplier) => ({
-      request_id: requestId,
-      supplier_org_id: supplier.organization_id,
-      supplier_alias: supplier.alias_code,
-    }))
-  );
-  if (invitationsError) throw invitationsError;
-
-  await Promise.all(
-    supplierProfiles.map((supplier) =>
-      notifyOrganization(admin, supplier.organization_id, {
-        type: "request_received",
-        title: "New quote request",
-        body: `${requestReference} is ready for your quote.`,
-        linkPath: "/auction/supplier/crm",
-      })
-    )
-  );
-  await audit(admin, membership.organizationId, userId, "restock_sourcing_requests", requestId, "INSERT", {
-    reference: requestReference,
-    suppliersInvited: supplierProfiles.length,
-  });
-
-  return response(req, { data: { id: requestId, reference: requestReference } }, 201);
+  return response(req, { data }, 201);
 }
 
 async function submitQuote(
@@ -358,78 +387,21 @@ async function submitQuote(
   userId: string,
   input: Extract<z.infer<typeof requestSchema>, { action: "submit_quote" }>
 ) {
-  const membership = await getMembership(admin, userId);
-  if (membership.accountType !== "supplier") {
-    return response(req, { error: "Only supplier accounts can submit quotes." }, 403);
-  }
-
-  const { data: request, error: requestError } = await admin
-    .from("restock_sourcing_requests")
-    .select("id, retailer_org_id, status, quote_deadline, delivery_date, restock_request_lines(quantity, target_price)")
-    .eq("id", input.requestId)
-    .single();
-  if (requestError) throw requestError;
-  if (!["sent", "quoted"].includes(request.status) || new Date(request.quote_deadline) < new Date()) {
-    return response(req, { error: "This quote request is closed." }, 409);
-  }
-
-  const { data: invitation } = await admin
-    .from("restock_request_suppliers")
-    .select("request_id")
-    .eq("request_id", input.requestId)
-    .eq("supplier_org_id", membership.organizationId)
-    .maybeSingle();
-  if (!invitation) return response(req, { error: "Your organization was not invited to this request." }, 403);
-
-  const deliveryDate = new Date();
-  deliveryDate.setUTCDate(deliveryDate.getUTCDate() + input.deliveryDays);
-  const targetTotal = request.restock_request_lines.reduce(
-    (total: number, line: { quantity: number; target_price: number }) =>
-      total + line.quantity * Number(line.target_price),
-    0
-  );
   const quoteId = crypto.randomUUID();
   const quoteReference = reference("QUO");
-  const quote = {
-    id: quoteId,
-    reference: quoteReference,
-    request_id: input.requestId,
-    supplier_org_id: membership.organizationId,
-    supplier_alias: membership.aliasCode,
-    total_price: input.totalPrice,
-    delivery_days: input.deliveryDays,
-    delivery_date: deliveryDate.toISOString().slice(0, 10),
-    payment_terms: input.paymentTerms,
-    score: scoreQuote(targetTotal, input.totalPrice, input.deliveryDays),
-    submitted_by: userId,
-    submitted_at: new Date().toISOString(),
-  };
-
-  const { data: savedQuote, error: quoteError } = await admin
-    .from("restock_quotes")
-    .upsert(quote, { onConflict: "request_id,supplier_org_id", ignoreDuplicates: false })
-    .select("id, reference, score")
-    .single();
-  if (quoteError) throw quoteError;
-
-  await admin
-    .from("restock_sourcing_requests")
-    .update({ status: "quoted" })
-    .eq("id", input.requestId)
-    .in("status", ["sent", "quoted"]);
-
-  await notifyOrganization(admin, request.retailer_org_id, {
-    type: "quote_received",
-    title: "New supplier quote",
-    body: `${membership.aliasCode} sent a quote for ${savedQuote.reference}.`,
-    linkPath: "/auction/shop/requests",
+  const { data, error } = await admin.rpc("restock_submit_quote", {
+    p_actor_user_id: userId,
+    p_idempotency_key: input.idempotencyKey,
+    p_request_id: input.requestId,
+    p_quote_id: quoteId,
+    p_quote_reference: quoteReference,
+    p_total_price: input.totalPrice,
+    p_delivery_days: input.deliveryDays,
+    p_payment_terms: input.paymentTerms,
   });
-  await audit(admin, membership.organizationId, userId, "restock_quotes", savedQuote.id, "INSERT", {
-    reference: savedQuote.reference,
-    requestId: input.requestId,
-  });
+  if (error) return databaseErrorResponse(req, error);
 
-  return response(req, { data: savedQuote }, 201);
+  return response(req, { data }, 201);
 }
 
 async function awardQuote(
@@ -438,121 +410,19 @@ async function awardQuote(
   userId: string,
   input: Extract<z.infer<typeof requestSchema>, { action: "award_quote" }>
 ) {
-  const membership = await getMembership(admin, userId);
-  if (membership.accountType !== "retailer") {
-    return response(req, { error: "Only retailer accounts can select a quote." }, 403);
-  }
-
-  const { data: request, error: requestError } = await admin
-    .from("restock_sourcing_requests")
-    .select("*, restock_request_lines(*)")
-    .eq("id", input.requestId)
-    .eq("retailer_org_id", membership.organizationId)
-    .single();
-  if (requestError) throw requestError;
-  if (request.status === "awarded") {
-    return response(req, { error: "A supplier has already been selected for this request." }, 409);
-  }
-  if (!["sent", "quoted"].includes(request.status)) {
-    return response(req, { error: "This quote request is closed and can no longer be awarded." }, 409);
-  }
-
-  const { data: quote, error: quoteError } = await admin
-    .from("restock_quotes")
-    .select("*")
-    .eq("id", input.quoteId)
-    .eq("request_id", input.requestId)
-    .eq("status", "submitted")
-    .single();
-  if (quoteError) throw quoteError;
-
-  const totalQuantity = request.restock_request_lines.reduce(
-    (total: number, line: { quantity: number }) => total + line.quantity,
-    0
-  );
-  const summary =
-    request.restock_request_lines.length === 1
-      ? request.restock_request_lines[0].product_name
-      : `${request.restock_request_lines[0].product_name} + ${request.restock_request_lines.length - 1} more`;
   const orderId = crypto.randomUUID();
   const orderReference = reference("ORD");
-
-  const { error: orderError } = await admin.from("restock_orders").insert({
-    id: orderId,
-    reference: orderReference,
-    request_id: request.id,
-    quote_id: quote.id,
-    buyer_org_id: membership.organizationId,
-    supplier_org_id: quote.supplier_org_id,
-    retailer_alias: membership.aliasCode,
-    supplier_alias: quote.supplier_alias,
-    product_summary: summary,
-    quantity: totalQuantity,
-    unit_price: Number(quote.total_price) / totalQuantity,
-    total_price: quote.total_price,
-    delivery_date: quote.delivery_date,
-    courier_last_scan: "Ninja Van booking pending",
-    created_by: userId,
+  const { data, error } = await admin.rpc("restock_award_quote", {
+    p_actor_user_id: userId,
+    p_idempotency_key: input.idempotencyKey,
+    p_request_id: input.requestId,
+    p_quote_id: input.quoteId,
+    p_order_id: orderId,
+    p_order_reference: orderReference,
   });
-  if (orderError) {
-    if (orderError.code === "23505") {
-      return response(req, { error: "This request has already produced an order." }, 409);
-    }
-    throw orderError;
-  }
+  if (error) return databaseErrorResponse(req, error);
 
-  await admin.from("restock_order_items").insert(
-    request.restock_request_lines.map(
-      (line: { product_id: string; product_name: string; category: string; quantity: number }) => ({
-        order_id: orderId,
-        product_id: line.product_id,
-        product_name: line.product_name,
-        category: line.category,
-        quantity: line.quantity,
-        unit_price: Number(quote.total_price) / totalQuantity,
-      })
-    )
-  );
-  await admin.from("restock_fulfillment_events").insert([
-    {
-      order_id: orderId,
-      actor_type: "system",
-      event_type: "order_confirmed",
-      title: "Order created",
-      detail: "The supplier is preparing the order for Ninja Van pickup.",
-    },
-    {
-      order_id: orderId,
-      actor_type: "ninja_van",
-      event_type: "booking_pending",
-      title: "Ninja Van pickup requested",
-      detail: "Waiting for Ninja Van to confirm the pickup.",
-    },
-  ]);
-  await admin
-    .from("restock_sourcing_requests")
-    .update({ status: "awarded", awarded_quote_id: quote.id })
-    .eq("id", request.id);
-  await admin.from("restock_quotes").update({ status: "awarded" }).eq("id", quote.id);
-  await admin
-    .from("restock_quotes")
-    .update({ status: "declined" })
-    .eq("request_id", request.id)
-    .neq("id", quote.id)
-    .eq("status", "submitted");
-
-  await notifyOrganization(admin, quote.supplier_org_id, {
-    type: "quote_awarded",
-    title: "Your quote was selected",
-    body: `${orderReference} is ready for you to prepare and photograph before pickup.`,
-    linkPath: "/auction/supplier/operations",
-  });
-  await audit(admin, membership.organizationId, userId, "restock_orders", orderId, "INSERT", {
-    reference: orderReference,
-    requestReference: request.reference,
-  });
-
-  return response(req, { data: { id: orderId, reference: orderReference } }, 201);
+  return response(req, { data }, 201);
 }
 
 async function submitSupplierProof(
@@ -579,6 +449,8 @@ async function submitSupplierProof(
   if (!["awaiting_supplier_proof", "awaiting_courier_pickup"].includes(order.verification_status)) {
     return response(req, { error: "A dispatch photo has already been submitted for this order." }, 409);
   }
+
+  await validateStoredEvidence(admin, input.storagePath, input.mimeType, input.fileSizeBytes);
 
   const { error: proofError } = await admin.from("restock_delivery_proofs").insert({
     order_id: order.id,
@@ -684,6 +556,8 @@ async function verifyDelivery(
   if (!supplierProof) {
     return response(req, { error: "The supplier dispatch photo is missing." }, 409);
   }
+
+  await validateStoredEvidence(admin, input.storagePath, input.mimeType, input.fileSizeBytes);
 
   const accepted = input.outcome === "accepted";
   const { error: proofError } = await admin.from("restock_delivery_proofs").insert({
@@ -953,6 +827,24 @@ Deno.serve(async (req: Request) => {
     const admin = createClient(supabaseUrl, secretKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    const limit = rateLimits[parsed.data.action];
+    const { data: allowed, error: rateLimitError } = await admin.rpc(
+      "restock_consume_rate_limit",
+      {
+        p_actor_user_id: user.id,
+        p_action: parsed.data.action,
+        p_max_attempts: limit.maxAttempts,
+        p_window_seconds: limit.windowSeconds,
+      }
+    );
+    if (rateLimitError) return databaseErrorResponse(req, rateLimitError);
+    if (!allowed) {
+      return response(
+        req,
+        { error: "Too many requests. Wait a few minutes before trying again." },
+        429
+      );
+    }
 
     switch (parsed.data.action) {
       case "onboard_organization":

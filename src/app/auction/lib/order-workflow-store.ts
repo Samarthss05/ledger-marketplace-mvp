@@ -37,7 +37,7 @@ export interface SupplierQuote {
     deliveryDate: string;
     paymentTerms: string;
     score: number;
-    status: "submitted" | "awarded" | "declined" | "withdrawn";
+    status: "submitted" | "awarded" | "declined" | "withdrawn" | "expired";
     submittedAt: string;
 }
 
@@ -132,6 +132,7 @@ export interface FulfillmentOrder {
 }
 
 export interface CreateRequestInput {
+    idempotencyKey: string;
     title: string;
     lines: OrderLine[];
     deliveryDate: string;
@@ -141,6 +142,7 @@ export interface CreateRequestInput {
 }
 
 export interface SubmitQuoteInput {
+    idempotencyKey: string;
     requestId: string;
     totalPrice: number;
     deliveryDays: number;
@@ -469,11 +471,12 @@ export function useOrderWorkflowStore() {
     );
 
     const awardQuote = useCallback(
-        async (requestId: string, quoteId: string) => {
+        async (requestId: string, quoteId: string, idempotencyKey: string) => {
             const order = await workflow<{ id: string; reference: string }>({
                 action: "award_quote",
                 requestId,
                 quoteId,
+                idempotencyKey,
             });
             await refresh();
             return order;
