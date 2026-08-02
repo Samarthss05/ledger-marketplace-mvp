@@ -1,6 +1,6 @@
 # ReStock market launch readiness
 
-Last audited: 1 August 2026
+Last audited: 2 August 2026
 
 This is a go/no-go checklist for taking ReStock from a controlled pilot to a
 commercial market launch in Singapore. It is an engineering and operations
@@ -10,23 +10,28 @@ assessment, not legal advice.
 
 The product has a coherent pilot flow: protected retailer and supplier aliases,
 structured quote requests, sealed supplier quotes, transactional quote selection,
-scheduled request expiry, idempotent workflow actions, Ninja Van tracking states,
-supplier and retailer photo evidence, disputes, audit events, RLS-protected data,
-and authenticated Edge Functions.
+scheduled request expiry, idempotent workflow actions, Stripe Connect onboarding
+and Checkout, webhook-confirmed payment states, payout/refund operations, Ninja
+Van tracking states, supplier and retailer photo evidence, disputes, audit events,
+RLS-protected data, and authenticated Edge Functions.
 
-It is not ready to hold customer money or run without manual operations. The
-highest-risk gaps are payment custody, courier booking, dispute staffing,
-business verification, WhatsApp automation, legal documents, and operational
-monitoring.
+The payment software path is implemented, but it is not ready to accept live
+money until Stripe production onboarding, secret configuration, test-mode
+end-to-end validation, legal review, and reconciliation procedures are complete.
+The other highest-risk gaps are courier booking, dispute staffing, business
+verification, WhatsApp automation, legal documents, and operational monitoring.
 
 ## P0 blockers before accepting real paid orders
 
-- [ ] **Choose a payment model and licensed provider.** `payout_status` currently
-  records a state only; ReStock does not collect, safeguard, refund, or release
-  money. Obtain Singapore legal advice before describing funds as “held” or
-  “escrow”. The Payment Services Act includes merchant acquisition and account
-  issuance as regulated payment services and imposes safeguarding duties in
-  relevant cases: <https://sso.agc.gov.sg/Act/PSA2019>.
+- [ ] **Activate and approve the Stripe Connect payment model.** ReStock now uses
+  Stripe Checkout with separate charges and transfers, supplier Express
+  onboarding, signed/idempotent webhooks, and queued transfers/refunds. Configure
+  test keys and the webhook, complete Stripe platform verification, run the full
+  test matrix, then obtain Singapore legal and accounting approval before live
+  mode. Do not describe funds as “held” or “escrow” without advice. The Payment
+  Services Act includes merchant acquisition and account issuance as regulated
+  payment services and imposes safeguarding duties in relevant cases:
+  <https://sso.agc.gov.sg/Act/PSA2019>.
 - [ ] **Create Ninja Van delivery orders.** Selecting a quote currently creates a
   ReStock order and a “booking pending” event, but does not call Ninja Van's Order
   API. Complete sandbox testing, production integration review, address mapping,
@@ -180,11 +185,24 @@ and
 
 ## Payments, refunds, and disputes
 
-- [ ] Use a licensed payment provider and provider-side webhooks as the source of
-  truth. Database labels alone must never cause financial ledger changes.
-- [ ] Implement a double-entry ledger, immutable provider references,
-  reconciliation, settlement reports, fees, GST invoices, failed payments,
-  chargebacks, refunds, partial refunds, and payout failures.
+- [x] Use Stripe provider-side webhooks as payment source of truth. Checkout
+  success, asynchronous payment success/failure, account state, disputes, and
+  refund updates are signature-verified and idempotently recorded before workflow
+  states change.
+- [x] Add immutable provider references and durable, idempotent transfer/refund
+  operations. Supplier payout is released only after retailer acceptance;
+  buyer-approved disputes reverse an existing transfer before refunding.
+- [x] Show server-calculated retailer transaction fees before Checkout and store
+  the exact percentage, fixed amount, subtotal, and total used for the charge.
+- [ ] Configure Stripe test secrets and the production webhook endpoint; verify
+  PayNow asynchronous completion, card 3DS, abandoned/expired Checkout, retries,
+  account restriction, payout failure, refund pending/failure, and duplicate or
+  out-of-order webhook events before enabling live mode.
+- [ ] Implement a formal double-entry accounting ledger, daily Stripe
+  reconciliation, settlement reports, GST invoices/tax treatment, chargeback
+  operations, partial refunds, negative-balance handling, and payout-failure
+  recovery. The current immutable payment/event/operation records are an audit
+  trail, not a complete general ledger.
 - [ ] Define payout release timing, auto-release conditions, grace periods,
   retailer non-response, supplier appeal, and courier-delivered-but-shop-closed
   cases.

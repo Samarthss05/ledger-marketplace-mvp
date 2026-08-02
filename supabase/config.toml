@@ -382,6 +382,22 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+[functions.restock-workflow]
+verify_jwt = true
+
+[functions.ninjavan-webhook]
+verify_jwt = false
+
+# Browser requests are authenticated inside the function and internal settlement
+# retries use the project's secret key in the apikey header.
+[functions.stripe-marketplace]
+verify_jwt = false
+
+# Stripe cannot send a Supabase JWT. The raw request is authenticated using the
+# Stripe-Signature HMAC before any event is processed.
+[functions.stripe-webhook]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

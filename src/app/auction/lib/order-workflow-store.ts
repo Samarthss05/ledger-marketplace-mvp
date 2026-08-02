@@ -77,6 +77,29 @@ export interface FulfillmentEvent {
     at: string;
 }
 
+export type PaymentStatus =
+    | "legacy"
+    | "not_started"
+    | "checkout_creating"
+    | "checkout_pending"
+    | "processing"
+    | "paid"
+    | "transfer_pending"
+    | "transferred"
+    | "refund_pending"
+    | "refunded"
+    | "failed"
+    | "disputed";
+
+export interface OrderPayment {
+    status: PaymentStatus;
+    paymentMethod?: "paynow" | "card";
+    amountSubtotal: number;
+    transactionFee: number;
+    amountTotal: number;
+    lastError?: string;
+}
+
 export interface DeliveryDispute {
     id: string;
     reference: string;
@@ -110,6 +133,8 @@ export interface FulfillmentOrder {
     deliveryDate: string;
     status: "confirmed" | "in_transit" | "delivered" | "cancelled";
     payoutStatus: "held" | "released" | "under_review" | "refunded";
+    paymentStatus: PaymentStatus;
+    payment?: OrderPayment;
     createdAt: string;
     courier: {
         partner: "Ninja Van";
@@ -243,6 +268,7 @@ function mapOrder(row: DbRecord, signedUrls: Map<string, string>): FulfillmentOr
     const retailerProof = proofs.find((proof) => proof.actor_type === "retailer");
     const disputes = rows(row.restock_disputes);
     const dispute = disputes[0];
+    const payment = rows(row.restock_payments)[0];
 
     return {
         id: stringValue(row.id),
@@ -258,6 +284,20 @@ function mapOrder(row: DbRecord, signedUrls: Map<string, string>): FulfillmentOr
         deliveryDate: stringValue(row.delivery_date),
         status: row.status as FulfillmentOrder["status"],
         payoutStatus: row.payout_status as FulfillmentOrder["payoutStatus"],
+        paymentStatus: row.payment_status as FulfillmentOrder["paymentStatus"],
+        payment: payment
+            ? {
+                  status: payment.status as PaymentStatus,
+                  paymentMethod:
+                      payment.payment_method === "paynow" || payment.payment_method === "card"
+                          ? payment.payment_method
+                          : undefined,
+                  amountSubtotal: numberValue(payment.amount_subtotal) / 100,
+                  transactionFee: numberValue(payment.retailer_fee_amount) / 100,
+                  amountTotal: numberValue(payment.amount_total) / 100,
+                  lastError: stringValue(payment.last_error) || undefined,
+              }
+            : undefined,
         createdAt: stringValue(row.created_at),
         courier: {
             partner: "Ninja Van",
@@ -377,7 +417,7 @@ export function useOrderWorkflowStore() {
                 supabase
                     .from("restock_orders")
                     .select(
-                        "*, restock_order_items(*), restock_fulfillment_events(*), restock_delivery_proofs(*), restock_disputes(*)"
+                        "*, restock_order_items(*), restock_fulfillment_events(*), restock_delivery_proofs(*), restock_disputes(*), restock_payments(*)"
                     )
                     .order("created_at", { ascending: false }),
                 organization.accountType === "retailer"

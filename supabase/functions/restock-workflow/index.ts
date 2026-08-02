@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { processPaymentOperation } from "../_shared/stripe-client.ts";
 
 const allowedOrigins = new Set([
   "https://samarthss05.github.io",
@@ -446,6 +447,9 @@ async function submitSupplierProof(
     .eq("supplier_org_id", membership.organizationId)
     .single();
   if (orderError) throw orderError;
+  if (!["legacy", "paid", "transfer_pending", "transferred"].includes(order.payment_status)) {
+    return response(req, { error: "Wait for the retailer payment before preparing this order." }, 409);
+  }
   if (!["awaiting_supplier_proof", "awaiting_courier_pickup"].includes(order.verification_status)) {
     return response(req, { error: "A dispatch photo has already been submitted for this order." }, 409);
   }
@@ -641,6 +645,12 @@ async function verifyDelivery(
     disputeReference,
   });
 
+  if (accepted) {
+    await processPaymentOperation(admin, order.id).catch((cause) => {
+      console.error("Supplier payment remains queued for retry.", cause);
+    });
+  }
+
   return response(req, {
     data: {
       orderId: order.id,
@@ -781,6 +791,10 @@ async function resolveDispute(
       status: buyerRefund ? "refunded" : "resolved_supplier",
       payoutStatus: buyerRefund ? "refunded" : "released",
     },
+  });
+
+  await processPaymentOperation(admin, order.id).catch((cause) => {
+    console.error("Dispute payment operation remains queued for retry.", cause);
   });
 
   return response(req, {

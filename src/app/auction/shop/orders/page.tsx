@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     AlertTriangle,
     ArrowRight,
@@ -9,12 +9,14 @@ import {
     CheckCircle2,
     CircleDollarSign,
     Clock3,
+    CreditCard,
     FileWarning,
     ImageIcon,
     LoaderCircle,
     LockKeyhole,
     Package,
     Plus,
+    QrCode,
     ShieldCheck,
     Truck,
 } from "lucide-react";
@@ -41,12 +43,20 @@ import {
     timelineEventCopy,
 } from "../../lib/display-copy";
 import { dateTime, money, moneyCompact } from "../../lib/format";
+import {
+    createCheckout,
+    quoteCheckout,
+    retryPaymentOperation,
+    syncCheckout,
+    type CheckoutQuote,
+    type PaymentMethod,
+} from "../../lib/payments";
 
 type Outcome = "accepted" | "damaged" | "short" | "wrong_items" | "other";
 type OrderFilter = "all" | "active" | "confirm" | "pending";
 
 export default function OrdersPage() {
-    const { createdOrders: orders, loading, error, verifyShopDelivery } = useOrderWorkflowStore();
+    const { createdOrders: orders, loading, error, refresh, verifyShopDelivery } = useOrderWorkflowStore();
     const [verifyOrder, setVerifyOrder] = useState<FulfillmentOrder | null>(null);
     const [photo, setPhoto] = useState<PreparedEvidencePhoto | null>(null);
     const [quantity, setQuantity] = useState("");
@@ -57,6 +67,14 @@ export default function OrdersPage() {
     const [submitting, setSubmitting] = useState(false);
     const [filter, setFilter] = useState<OrderFilter>("all");
     const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
+    const [paymentOrder, setPaymentOrder] = useState<FulfillmentOrder | null>(null);
+    const [paymentQuote, setPaymentQuote] = useState<CheckoutQuote | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("paynow");
+    const [paymentLoading, setPaymentLoading] = useState(false);
+    const [paymentError, setPaymentError] = useState<string | null>(null);
+    const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
+    const checkoutSyncStarted = useRef(false);
+    const settlementRetries = useRef(new Set<string>());
 
     const filteredOrders = orders.filter((order) => {
         if (filter === "active") {
@@ -80,6 +98,55 @@ export default function OrdersPage() {
         }
         if (requestedOrder) setFocusedOrderId(requestedOrder);
     }, []);
+
+    useEffect(() => {
+        if (checkoutSyncStarted.current) return;
+        const params = new URLSearchParams(window.location.search);
+        const paymentResult = params.get("payment");
+        const orderId = params.get("order");
+        const sessionId = params.get("session_id");
+
+        if (paymentResult === "cancelled") {
+            checkoutSyncStarted.current = true;
+            setPaymentNotice("Payment was cancelled. Your order is unchanged and you can pay when ready.");
+            return;
+        }
+        if (paymentResult !== "success" || !orderId || !sessionId) return;
+
+        checkoutSyncStarted.current = true;
+        setPaymentNotice("Confirming your payment with Stripe…");
+        void syncCheckout(orderId, sessionId)
+            .then(async (result) => {
+                setPaymentNotice(
+                    result.paymentStatus === "paid"
+                        ? "Payment confirmed. The supplier can now prepare your order."
+                        : "Stripe is still confirming the payment. This page will update automatically."
+                );
+                await refresh();
+            })
+            .catch((cause) => {
+                setPaymentNotice(
+                    cause instanceof Error
+                        ? cause.message
+                        : "Payment was submitted, but its status could not be refreshed yet."
+                );
+            });
+    }, [refresh]);
+
+    useEffect(() => {
+        if (loading) return;
+        orders
+            .filter((order) => ["transfer_pending", "refund_pending"].includes(order.paymentStatus))
+            .forEach((order) => {
+                if (settlementRetries.current.has(order.id)) return;
+                settlementRetries.current.add(order.id);
+                void retryPaymentOperation(order.id)
+                    .then(async (result) => {
+                        if (result.processed) await refresh();
+                    })
+                    .catch(() => undefined);
+            });
+    }, [loading, orders, refresh]);
 
     useEffect(() => {
         if (!loading && focusedOrderId) {
@@ -107,6 +174,34 @@ export default function OrdersPage() {
         setPhoto(null);
         setPhotoError(null);
         setActionError(null);
+    };
+
+    const openPayment = async (order: FulfillmentOrder) => {
+        setPaymentOrder(order);
+        setPaymentQuote(null);
+        setPaymentMethod("paynow");
+        setPaymentError(null);
+        setPaymentLoading(true);
+        try {
+            setPaymentQuote(await quoteCheckout(order.id));
+        } catch (cause) {
+            setPaymentError(cause instanceof Error ? cause.message : "Unable to prepare payment.");
+        } finally {
+            setPaymentLoading(false);
+        }
+    };
+
+    const continueToStripe = async () => {
+        if (!paymentOrder || !paymentQuote?.supplierReady) return;
+        setPaymentLoading(true);
+        setPaymentError(null);
+        try {
+            const checkout = await createCheckout(paymentOrder.id, paymentMethod);
+            window.location.assign(checkout.checkoutUrl);
+        } catch (cause) {
+            setPaymentError(cause instanceof Error ? cause.message : "Unable to open Stripe Checkout.");
+            setPaymentLoading(false);
+        }
     };
 
     const choosePhoto = async (file?: File) => {
@@ -191,6 +286,22 @@ export default function OrdersPage() {
                 </p>
             ) : null}
 
+            {paymentNotice ? (
+                <div
+                    role="status"
+                    className="flex items-start justify-between gap-4 rounded-xl border border-[#D9E5D7] bg-[#F1F7EF] px-4 py-3 text-[14px] text-[#46634C]"
+                >
+                    <span>{paymentNotice}</span>
+                    <button
+                        type="button"
+                        onClick={() => setPaymentNotice(null)}
+                        className="shrink-0 text-[12px] font-semibold hover:underline"
+                    >
+                        Dismiss
+                    </button>
+                </div>
+            ) : null}
+
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <MetricCard
                     icon={Package}
@@ -244,6 +355,7 @@ export default function OrdersPage() {
                             order={order}
                             focused={order.id === focusedOrderId}
                             onVerify={() => openVerification(order)}
+                            onPay={() => void openPayment(order)}
                         />
                     ))}
                 </div>
@@ -423,6 +535,21 @@ export default function OrdersPage() {
                     </div>
                 </Modal>
             ) : null}
+
+            {paymentOrder ? (
+                <PaymentModal
+                    order={paymentOrder}
+                    quote={paymentQuote}
+                    selectedMethod={paymentMethod}
+                    loading={paymentLoading}
+                    error={paymentError}
+                    onSelectMethod={setPaymentMethod}
+                    onClose={() => {
+                        if (!paymentLoading) setPaymentOrder(null);
+                    }}
+                    onContinue={() => void continueToStripe()}
+                />
+            ) : null}
         </div>
     );
 }
@@ -431,11 +558,16 @@ function OrderCard({
     order,
     focused,
     onVerify,
+    onPay,
 }: {
     order: FulfillmentOrder;
     focused: boolean;
     onVerify: () => void;
+    onPay: () => void;
 }) {
+    const paymentRequired = ["not_started", "checkout_pending", "failed"].includes(
+        order.paymentStatus
+    );
     return (
         <article
             id={`order-${order.id}`}
@@ -456,6 +588,7 @@ function OrderCard({
                                 {order.productName}
                             </h2>
                             <OrderStatus status={order.verificationStatus} />
+                            <PaymentStatusChip status={order.paymentStatus} />
                         </div>
                         <p className="mt-1.5 text-[13px] text-[#8A918A]">
                             {order.reference} · {order.supplierAlias} · {order.quantity} units
@@ -463,6 +596,11 @@ function OrderCard({
                         <p className="tabular mt-3 text-[18px] font-semibold text-[#2F312F]">
                             {money(order.totalPrice)}
                         </p>
+                        {order.payment && order.payment.transactionFee > 0 ? (
+                            <p className="mt-1 text-[12px] text-[#8A918A]">
+                                Paid total {money(order.payment.amountTotal)} including transaction fee
+                            </p>
+                        ) : null}
                     </div>
                 </div>
                 <div className="shrink-0 rounded-xl border border-[#E8EDE6] bg-[#F7F9F5] p-4 lg:w-72">
@@ -497,7 +635,32 @@ function OrderCard({
                     })}
                 </div>
                 <div>
-                    {order.verificationStatus === "awaiting_shop_verification" ? (
+                    {paymentRequired ? (
+                        <div className="rounded-xl border border-[#D9E5D7] bg-[#F4F8F2] p-4">
+                            <p className="flex items-center gap-2 text-[14px] font-semibold text-[#3F5F47]">
+                                <CreditCard size={15} /> Payment required
+                            </p>
+                            <p className="mt-1 text-[13px] leading-6 text-[#657265]">
+                                Review PayNow and card fees before continuing to Stripe.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={onPay}
+                                className={`${primaryButtonClass} mt-3 w-full`}
+                            >
+                                Pay securely <ArrowRight size={15} />
+                            </button>
+                        </div>
+                    ) : order.paymentStatus === "checkout_creating" || order.paymentStatus === "processing" ? (
+                        <div className="rounded-xl bg-[#F4F6F3] p-4">
+                            <p className="flex items-center gap-2 text-[14px] font-semibold text-[#5E685E]">
+                                <LoaderCircle className="animate-spin" size={15} /> Confirming payment
+                            </p>
+                            <p className="mt-1 text-[13px] leading-6 text-[#7B817B]">
+                                Stripe is preparing or confirming the payment. This page updates automatically.
+                            </p>
+                        </div>
+                    ) : order.verificationStatus === "awaiting_shop_verification" ? (
                         <button type="button" onClick={onVerify} className={`${primaryButtonClass} w-full`}>
                             <Camera size={16} /> Confirm delivery
                         </button>
@@ -519,7 +682,7 @@ function OrderCard({
                                 <ShieldCheck size={15} /> Order completed
                             </p>
                             <p className="mt-1 text-[13px] leading-6 text-[#607460]">
-                                You confirmed the delivery. Payment status was updated.
+                                You confirmed the delivery. Supplier payment is being released securely.
                             </p>
                         </div>
                     ) : (
@@ -535,6 +698,186 @@ function OrderCard({
                 </div>
             </div>
         </article>
+    );
+}
+
+function PaymentModal({
+    order,
+    quote,
+    selectedMethod,
+    loading,
+    error,
+    onSelectMethod,
+    onClose,
+    onContinue,
+}: {
+    order: FulfillmentOrder;
+    quote: CheckoutQuote | null;
+    selectedMethod: PaymentMethod;
+    loading: boolean;
+    error: string | null;
+    onSelectMethod: (method: PaymentMethod) => void;
+    onClose: () => void;
+    onContinue: () => void;
+}) {
+    const selectedQuote = quote?.quotes.find((item) => item.paymentMethod === selectedMethod);
+    return (
+        <Modal
+            open
+            onClose={onClose}
+            size="lg"
+            eyebrow="Secure payment"
+            title={`Pay ${order.reference}`}
+            description={`${order.productName} · ${order.quantity} units`}
+            footer={
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" onClick={onClose} disabled={loading} className={secondaryButtonClass}>
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onContinue}
+                        disabled={loading || !quote?.supplierReady || !selectedQuote}
+                        className={primaryButtonClass}
+                    >
+                        {loading ? <LoaderCircle className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
+                        {selectedQuote
+                            ? `Continue to Stripe · ${money(selectedQuote.amountTotal / 100)}`
+                            : "Continue to Stripe"}
+                    </button>
+                </div>
+            }
+        >
+            <div className="space-y-5">
+                {loading && !quote ? (
+                    <div className="flex items-center justify-center gap-2 py-12 text-[14px] text-[#6F9277]">
+                        <LoaderCircle className="animate-spin" size={18} /> Preparing payment options…
+                    </div>
+                ) : quote ? (
+                    <>
+                        {!quote.supplierReady ? (
+                            <div className="flex items-start gap-3 rounded-xl bg-[#FFF5EC] px-4 py-3.5 text-[13px] leading-6 text-[#765031]">
+                                <AlertTriangle className="mt-0.5 shrink-0" size={17} />
+                                <span>{quote.unavailableReason}</span>
+                            </div>
+                        ) : null}
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            {quote.quotes.map((option) => {
+                                const selected = option.paymentMethod === selectedMethod;
+                                const Icon = option.paymentMethod === "paynow" ? QrCode : CreditCard;
+                                return (
+                                    <button
+                                        key={option.paymentMethod}
+                                        type="button"
+                                        onClick={() => onSelectMethod(option.paymentMethod)}
+                                        className={`rounded-xl border p-4 text-left transition ${
+                                            selected
+                                                ? "border-[#6F9277] bg-[#F1F7EF] shadow-[0_8px_22px_-18px_rgba(54,88,69,0.7)]"
+                                                : "border-[#E0E6DE] bg-white hover:border-[#AFC0AC]"
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <span className="rounded-lg bg-[#EAF2E8] p-2 text-[#4F6F56]">
+                                                <Icon size={18} />
+                                            </span>
+                                            {option.recommended ? (
+                                                <span className="rounded-full bg-[#DCEBDA] px-2 py-1 text-[10px] font-semibold tracking-[0.05em] text-[#416449] uppercase">
+                                                    Lowest fee
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                        <p className="mt-3 text-[15px] font-semibold text-[#2F312F]">
+                                            {option.paymentMethod === "paynow" ? "PayNow" : "Card"}
+                                        </p>
+                                        <p className="mt-1 text-[12px] leading-5 text-[#7B817B]">
+                                            {option.feeDescription}
+                                        </p>
+                                        <p className="tabular mt-3 text-[14px] font-semibold text-[#415646]">
+                                            Fee {money(option.transactionFee / 100)}
+                                        </p>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {selectedQuote ? (
+                            <div className="rounded-xl border border-[#E2E8E0] bg-[#FAFBF9] p-4">
+                                <div className="flex items-center justify-between text-[13px] text-[#646B64]">
+                                    <span>Supplier quote</span>
+                                    <span className="tabular font-medium text-[#343834]">
+                                        {money(selectedQuote.amountSubtotal / 100)}
+                                    </span>
+                                </div>
+                                <div className="mt-2 flex items-center justify-between text-[13px] text-[#646B64]">
+                                    <span>{selectedQuote.feeDescription}</span>
+                                    <span className="tabular font-medium text-[#343834]">
+                                        {money(selectedQuote.transactionFee / 100)}
+                                    </span>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between border-t border-[#E1E6DF] pt-3">
+                                    <span className="text-[14px] font-semibold text-[#2F312F]">Total charged</span>
+                                    <span className="tabular text-[18px] font-semibold text-[#2F312F]">
+                                        {money(selectedQuote.amountTotal / 100)}
+                                    </span>
+                                </div>
+                            </div>
+                        ) : null}
+
+                        <p className="flex items-start gap-2 text-[12px] leading-5 text-[#7D847D]">
+                            <LockKeyhole className="mt-0.5 shrink-0" size={13} />
+                            The supplier receives the quoted amount. The disclosed transaction fee covers payment processing,
+                            controlled payout and refund handling. Card details are entered only on Stripe Checkout.
+                        </p>
+                    </>
+                ) : null}
+
+                {error ? (
+                    <p role="alert" className="rounded-lg bg-[#FFF2EF] px-4 py-3 text-[13px] text-[#A33A2B]">
+                        {error}
+                    </p>
+                ) : null}
+            </div>
+        </Modal>
+    );
+}
+
+function PaymentStatusChip({ status }: { status: FulfillmentOrder["paymentStatus"] }) {
+    if (status === "legacy") return null;
+    const paid = ["paid", "transfer_pending", "transferred"].includes(status);
+    const problem = ["failed", "disputed", "refund_pending", "refunded"].includes(status);
+    const label =
+        status === "not_started"
+            ? "Payment required"
+            : status === "checkout_pending"
+              ? "Checkout ready"
+              : status === "transferred"
+                ? "Supplier paid"
+                : status === "transfer_pending"
+                  ? "Supplier payment queued"
+                  : status === "refund_pending"
+                    ? "Refund pending"
+                    : status === "refunded"
+                      ? "Refunded"
+                      : status === "disputed"
+                        ? "Payment under review"
+                        : status === "failed"
+                          ? "Payment failed"
+                          : paid
+                            ? "Paid"
+                            : "Payment processing";
+    return (
+        <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                paid
+                    ? "bg-[#E7F2E6] text-[#3F7048]"
+                    : problem
+                      ? "bg-[#FFF0E8] text-[#A4582A]"
+                      : "bg-[#EDF0FA] text-[#4A5D92]"
+            }`}
+        >
+            {label}
+        </span>
     );
 }
 

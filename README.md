@@ -8,11 +8,14 @@ the delivery chain of custody; both parties submit private photo evidence.
 
 1. A retailer creates a structured RFQ and invites verified supplier aliases.
 2. Suppliers submit complete quotes. ReStock ranks price and delivery fit.
-3. The retailer awards one quote and an order is created with payout held.
-4. The supplier photographs sealed stock before Ninja Van collection.
-5. Ninja Van webhook events update pickup, transit, and delivery state.
-6. The retailer photographs received stock and accepts it or opens a dispute.
-7. Accepted orders release the payout state. Disputes enter independent review.
+3. The retailer awards one quote and pays through Stripe Checkout. PayNow is the
+   lower-cost default; card checkout shows its transaction fee before payment.
+4. Stripe holds the platform charge while the supplier prepares the order.
+5. The supplier photographs sealed stock before Ninja Van collection.
+6. Ninja Van webhook events update pickup, transit, and delivery state.
+7. The retailer photographs received stock and accepts it or opens a dispute.
+8. Acceptance creates an idempotent Stripe Connect transfer to the supplier.
+   A buyer-approved dispute queues a provider refund instead.
 
 Legal names, phone numbers, and addresses are restricted to the owning
 organization and backend logistics services. They are not exposed to the other
@@ -24,6 +27,8 @@ party.
 - Supabase Auth, Postgres, Row Level Security, private Storage, and Edge Functions
 - `restock-workflow` authenticated command boundary
 - `ninjavan-webhook` raw-body HMAC verification and idempotent courier events
+- Stripe Connect Express, Stripe Checkout, signed webhooks, and durable
+  transfer/refund operations
 
 ## Local development
 
@@ -54,8 +59,25 @@ The following production configuration is required outside source control:
   `https://mlhjwbzxqvszfizaxzex.supabase.co/functions/v1/ninjavan-webhook`
   as the Ninja Van webhook URL.
 - Add approved reviewer user IDs to `public.restock_reviewers`.
-- Configure the payment provider that moves funds; database payout states are an
-  auditable workflow control and do not themselves transfer money.
+- Add `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` to Supabase Edge Function
+  secrets. Use test-mode keys until the complete pilot has passed.
+- Register
+  `https://mlhjwbzxqvszfizaxzex.supabase.co/functions/v1/stripe-webhook`
+  as a `2026-02-25.clover` Stripe webhook endpoint. Subscribe to
+  `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+  `checkout.session.expired`, `checkout.session.async_payment_failed`,
+  `payment_intent.payment_failed`, `account.updated`,
+  `charge.dispute.created`, `refund.updated`, and `refund.failed`.
+- Set `RESTOCK_APP_URL` to the deployed application base URL. The default fee
+  configuration charges retailers 1.90% + S$0.50 for PayNow or 4.10% + S$1.00
+  for cards; change the `RESTOCK_*_FEE_*` secrets only after commercial and legal
+  review.
+
+Retailer fees are calculated on the server, saved with the order, and shown as a
+separate Checkout line item. Supplier payout equals the awarded quote subtotal;
+ReStock receives the difference. The application uses separate charges and
+transfers so delivery acceptance controls payout. Do not market this as escrow
+without Singapore legal advice.
 
 The reviewer portal is `/auction/review`. Access is denied unless the signed-in
 user is active in `restock_reviewers`.

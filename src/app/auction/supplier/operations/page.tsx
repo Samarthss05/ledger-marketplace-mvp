@@ -4,12 +4,14 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import {
     AlertTriangle,
+    ArrowRight,
     Camera,
     CheckCircle2,
     CircleDollarSign,
     ImageIcon,
     LoaderCircle,
     LockKeyhole,
+    Landmark,
     Package,
     ShieldCheck,
     Truck,
@@ -37,6 +39,13 @@ import {
     timelineEventCopy,
 } from "../../lib/display-copy";
 import { money, moneyCompact } from "../../lib/format";
+import {
+    createConnectDashboard,
+    createConnectOnboarding,
+    loadSupplierPaymentAccount,
+    refreshConnectAccount,
+    type SupplierPaymentAccount,
+} from "../../lib/payments";
 
 export default function SupplierOperationsPage() {
     const { createdOrders: orders, loading, error, submitSupplierProof } = useOrderWorkflowStore();
@@ -47,6 +56,9 @@ export default function SupplierOperationsPage() {
     const [photoError, setPhotoError] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [paymentAccount, setPaymentAccount] = useState<SupplierPaymentAccount | null>(null);
+    const [paymentSetupLoading, setPaymentSetupLoading] = useState(true);
+    const [paymentSetupError, setPaymentSetupError] = useState<string | null>(null);
 
     useEffect(
         () => () => {
@@ -54,6 +66,46 @@ export default function SupplierOperationsPage() {
         },
         [photo]
     );
+
+    useEffect(() => {
+        let active = true;
+        const params = new URLSearchParams(window.location.search);
+        const returnedFromStripe = ["return", "refresh"].includes(params.get("stripe") ?? "");
+
+        void (returnedFromStripe ? refreshConnectAccount().then(() => loadSupplierPaymentAccount()) : loadSupplierPaymentAccount())
+            .then((account) => active && setPaymentAccount(account))
+            .catch((cause) => {
+                if (active) setPaymentSetupError(cause instanceof Error ? cause.message : "Unable to load payout setup.");
+            })
+            .finally(() => active && setPaymentSetupLoading(false));
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const openStripeSetup = async () => {
+        setPaymentSetupLoading(true);
+        setPaymentSetupError(null);
+        try {
+            const result = await createConnectOnboarding();
+            window.location.assign(result.url);
+        } catch (cause) {
+            setPaymentSetupError(cause instanceof Error ? cause.message : "Unable to open Stripe onboarding.");
+            setPaymentSetupLoading(false);
+        }
+    };
+
+    const openStripeDashboard = async () => {
+        setPaymentSetupLoading(true);
+        setPaymentSetupError(null);
+        try {
+            const result = await createConnectDashboard();
+            window.location.assign(result.url);
+        } catch (cause) {
+            setPaymentSetupError(cause instanceof Error ? cause.message : "Unable to open Stripe Express.");
+            setPaymentSetupLoading(false);
+        }
+    };
 
     const openProof = (order: FulfillmentOrder) => {
         setProofOrder(order);
@@ -103,6 +155,11 @@ export default function SupplierOperationsPage() {
 
     const quantityMismatch =
         proofOrder && Number(quantity) > 0 && Number(quantity) !== proofOrder.quantity;
+    const payoutsReady = Boolean(
+        paymentAccount?.details_submitted &&
+            paymentAccount?.payouts_enabled &&
+            paymentAccount?.transfers_status === "active"
+    );
 
     return (
         <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
@@ -124,6 +181,49 @@ export default function SupplierOperationsPage() {
                 </p>
             ) : null}
 
+            <section
+                className={`rounded-2xl border p-5 ${
+                    payoutsReady ? "border-[#D8E5D6] bg-[#F4F8F2]" : "border-[#E8DEC9] bg-[#FFFAF2]"
+                }`}
+            >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                        <span
+                            className={`rounded-xl p-2.5 ${
+                                payoutsReady ? "bg-[#E2F0E0] text-[#42664A]" : "bg-[#F8EEDB] text-[#8A6335]"
+                            }`}
+                        >
+                            {payoutsReady ? <CheckCircle2 size={20} /> : <Landmark size={20} />}
+                        </span>
+                        <div>
+                            <h2 className="text-[15px] font-semibold text-[#2F312F]">
+                                {payoutsReady ? "Stripe payouts are ready" : "Set up supplier payouts"}
+                            </h2>
+                            <p className="mt-1 max-w-2xl text-[13px] leading-6 text-[#6F756F]">
+                                {payoutsReady
+                                    ? "Verified order payments are released to your Stripe balance after the retailer confirms delivery."
+                                    : "Complete Stripe’s secure business verification and add a bank account before retailers can pay new orders."}
+                            </p>
+                            {paymentSetupError ? (
+                                <p className="mt-2 text-[13px] text-[#A33A2B]">{paymentSetupError}</p>
+                            ) : paymentAccount?.disabled_reason ? (
+                                <p className="mt-2 text-[13px] text-[#8A5A2E]">{paymentAccount.disabled_reason}</p>
+                            ) : null}
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => void (payoutsReady ? openStripeDashboard() : openStripeSetup())}
+                        disabled={paymentSetupLoading}
+                        className={payoutsReady ? secondaryButtonClass : primaryButtonClass}
+                    >
+                        {paymentSetupLoading ? <LoaderCircle className="animate-spin" size={16} /> : null}
+                        {payoutsReady ? "Open Stripe Express" : "Continue with Stripe"}
+                        {!paymentSetupLoading ? <ArrowRight size={15} /> : null}
+                    </button>
+                </div>
+            </section>
+
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <MetricCard icon={Package} label="Confirmed orders" value={orders.length.toString()} />
                 <MetricCard
@@ -131,6 +231,7 @@ export default function SupplierOperationsPage() {
                     label="Dispatch photos needed"
                     value={orders
                         .filter((order) => order.verificationStatus === "awaiting_supplier_proof")
+                        .filter((order) => ["legacy", "paid", "transfer_pending", "transferred"].includes(order.paymentStatus))
                         .length.toString()}
                 />
                 <MetricCard
@@ -146,10 +247,14 @@ export default function SupplierOperationsPage() {
                 />
                 <MetricCard
                     icon={CircleDollarSign}
-                    label="Completed order value"
+                    label="Paid order value"
                     value={moneyCompact(
                         orders
-                            .filter((order) => order.payoutStatus === "released")
+                            .filter(
+                                (order) =>
+                                    order.paymentStatus === "transferred" ||
+                                    (order.paymentStatus === "legacy" && order.payoutStatus === "released")
+                            )
                             .reduce((sum, order) => sum + order.totalPrice, 0)
                     )}
                 />
@@ -305,6 +410,9 @@ export default function SupplierOperationsPage() {
 }
 
 function OrderCard({ order, onProof }: { order: FulfillmentOrder; onProof: () => void }) {
+    const paymentReady = ["legacy", "paid", "transfer_pending", "transferred"].includes(
+        order.paymentStatus
+    );
     return (
         <article className="rounded-2xl border border-[#E2E8E0] bg-white p-5">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -318,6 +426,25 @@ function OrderCard({ order, onProof }: { order: FulfillmentOrder; onProof: () =>
                                 {order.productName}
                             </h2>
                             <OrderStatus status={order.verificationStatus} />
+                            {order.paymentStatus !== "legacy" ? (
+                                <span
+                                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                        paymentReady
+                                            ? "bg-[#E7F2E6] text-[#3F7048]"
+                                            : order.paymentStatus === "disputed"
+                                              ? "bg-[#FFF0E8] text-[#A4582A]"
+                                              : "bg-[#EDF0FA] text-[#4A5D92]"
+                                    }`}
+                                >
+                                    {paymentReady
+                                        ? order.paymentStatus === "transferred"
+                                            ? "Paid out"
+                                            : "Retailer paid"
+                                        : order.paymentStatus === "disputed"
+                                          ? "Payment on hold"
+                                          : "Awaiting retailer payment"}
+                                </span>
+                            ) : null}
                         </div>
                         <p className="mt-1.5 text-[13px] text-[#8A918A]">
                             {order.reference} · Retailer {order.retailerAlias} · {order.quantity} units
@@ -357,7 +484,16 @@ function OrderCard({ order, onProof }: { order: FulfillmentOrder; onProof: () =>
                     })}
                 </div>
                 <div>
-                    {order.verificationStatus === "awaiting_supplier_proof" ? (
+                    {!paymentReady ? (
+                        <div className="rounded-xl bg-[#F4F6F3] p-4">
+                            <p className="flex items-center gap-2 text-[14px] font-semibold text-[#5E685E]">
+                                <LockKeyhole size={15} /> Awaiting retailer payment
+                            </p>
+                            <p className="mt-1 text-[13px] leading-6 text-[#7B817B]">
+                                Do not prepare or dispatch this order yet. We will notify you after Stripe confirms payment.
+                            </p>
+                        </div>
+                    ) : order.verificationStatus === "awaiting_supplier_proof" ? (
                         <button type="button" onClick={onProof} className={`${primaryButtonClass} w-full`}>
                             <Camera size={16} /> Add dispatch photo
                         </button>
